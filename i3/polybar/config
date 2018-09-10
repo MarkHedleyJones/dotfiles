@@ -21,7 +21,7 @@ margin-top = 5
 margin-bottom = 5
 
 [bar/example]
-;monitor = ${env:MONITOR:HDMI-1}
+monitor = ${env:MONITOR:DP-2}
 width = 100%
 height = 27
 offset-x = 0
@@ -239,7 +239,7 @@ label-disconnected-foreground = ${colors.foreground-alt}
 type = internal/date
 interval = 5
 
-date = "%Y-%m-%d"
+date = "%Y, Week %W, Day %w - %Y-%m-%d"
 date-alt = " %Y-%m-%d"
 
 time = %H:%M
