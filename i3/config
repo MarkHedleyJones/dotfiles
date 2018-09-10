@@ -46,7 +46,7 @@ bindsym XF86AudioRaiseVolume exec pactl set-sink-volume alsa_output.pci-0000_00_
 bindsym XF86AudioMute exec pactl set-sink-volume alsa_output.pci-0000_00_1b.0.analog-stereo 0
 bindsym XF86AudioLowerVolume exec pactl set-sink-volume alsa_output.pci-0000_00_1b.0.analog-stereo -2%
 bindsym Mod4+Escape exec i3lock -i ~/.config/i3/artwork/suzy-lock.png
-
+bindsym Mod4+c exec --no-startup-id gnome-terminal -e 'sh -c "ncal 2018 -wM && sleep infinity"'
 bindsym $mod+j exec xrandr -o left
 bindsym $mod+k exec xrandr -o normal
 #bindkey 64+34$mod+0x5b exec xrandr -o left
@@ -107,13 +107,13 @@ bindsym $mod+t layout tabbed
 bindsym $mod+p layout toggle split
 
 # toggle tiling / floating
-bindsym $mod+Shift+space floating toggle
+bindsym $mod+y floating toggle
 
 # change focus between tiling / floating windows
-bindsym $mod+space focus mode_toggle
+bindsym $mod+l focus mode_toggle
 
 # focus the parent container
-bindsym $mod+a focus parent
+
 
 # focus the child container
 #bindsym $mod+d focus child
