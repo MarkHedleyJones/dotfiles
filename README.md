@@ -1,9 +1,12 @@
 # Dependencies
 
+This guide is intended to be run on Ubuntu 18.04
+
 ## I3-Gaps (with Gnome-session)
 ```
 sudo add-apt-repository ppa:kgilmer/speed-ricer
-sudo apt-get install gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git
+sudo apt-get update && sudo apt-get install gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git
+sudo update-alternatives --config gdm3.css
 mkdir ~/repos && cd ~/repos
 git clone https://github.com/MarkHedleyJones/dotFiles.git
 ln -s ~/repos/dotFiles/i3 ~/.config
@@ -57,11 +60,22 @@ cp ~/repos/dotFiles/Preferences.sublime-settings ~/.config/sublime-text-3/Packag
 
 ## Others
 ```
+sudo apt-get install vim-gtk3
 sudo apt-get remove apport
 cd ~/repos
 git clone https://github.com/seqsense/ros_style.git
 ln -s ~/repos/ros_style/.clang-format ~/
+git config --global user.name "Mark Hedley Jones"
+git config --global user.email "markhedleyjones@gmail.com"
+```
+
+### SSH Keys
+Fist, copy contents of SSH keys into `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`
+Then set permissions with:
+```
+chmod 644 id_rsa.pub
+chmod 600 id_rsa
 ```
 
 Install:
-* [Chrome](https://www.google.com/chrome/)
+* [Google Chrome](https://www.google.com/chrome/)
