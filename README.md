@@ -55,7 +55,7 @@ Install Package Control then
 * Material Dark
 
 ```
-cp ~/repos/dotFiles/Preferences.sublime-settings ~/.config/sublime-text-3/Packages/User
+ln -s ~/repos/dotFiles/Preferences.sublime-settings ~/.config/sublime-text-3/Packages/User
 ```
 
 ## Others
