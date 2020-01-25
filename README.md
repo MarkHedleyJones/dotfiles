@@ -70,6 +70,31 @@ sudo apt-get remove apport
 Install:
 * [Google Chrome](https://www.google.com/chrome/)
 
+### Japanese Language Support
+
+Add Japanese Language support in Gnome
+* Log into Gnome
+* Launch Language Support
+* Install / Remove Languages
+* Tick Japanese
+
+```
+sudo apt-get remove ibus*
+sudo apt-get install fcitx-mozc
+```
+Log out and log back into Gnome.
+* Run "Input Method"
+* Hit OK
+* Select "Yes" to update the settings
+* Select fcitx and select OK.
+* Confirm the settings by cliking OK.
+
+Log out and log into i3:
+* Right-click Keyboard icon in system tray and click "Configure"
+* Global Config
+* Trigger Input Method set to "Super+Space"
+
+
 ### SSH Keys
 Fist, copy contents of SSH keys into `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`
 Then set permissions with:

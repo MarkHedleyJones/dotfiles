@@ -196,6 +196,7 @@ exec --no-startup-id feh --bg-fill $HOME/.config/i3/wallpaper.jpg
 exec --no-startup-id nm-applet
 exec --no-startup-id gnome-keyring-daemon
 exec --no-startup-id /usr/lib/gnome-settings-daemon/gsd-xsettings
+exec --no-startup-id fcitx --replace
 exec --no-startup-id xset r rate 200 20
 
 client.focused #0088CC #0088CC #ffffff #dddddd
