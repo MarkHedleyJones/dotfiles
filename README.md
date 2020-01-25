@@ -14,6 +14,7 @@ git clone https://github.com/MarkHedleyJones/dmenu-extended.git
 cd dmenu-extended
 sudo python setup.py install
 ln -s ~/repos/dotFiles/i3 ~/.config
+ln -s ~/repos/dotFiles/.Xresources ~/.Xresources
 ```
 
 ### Configure gnome-terminal
