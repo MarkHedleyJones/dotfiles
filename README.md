@@ -6,7 +6,7 @@ This guide is intended to be run on Ubuntu 18.04
 This will install a vanilla gnome environment, i3-gaps, dmenu-extended and the configuration files from this repo.
 ```
 sudo add-apt-repository ppa:kgilmer/speed-ricer
-sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git
+sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git feh arandr
 sudo update-alternatives --config gdm3.css
 mkdir ~/repos && cd ~/repos
 git clone https://github.com/MarkHedleyJones/dotFiles.git
