@@ -2,13 +2,17 @@
 
 This guide is intended to be run on Ubuntu 18.04
 
-## I3-Gaps (with Gnome-session)
+## Window Manager (i3 & gnome-shell)
+This will install a vanilla gnome environment, i3-gaps, dmenu-extended and the configuration files from this repo.
 ```
 sudo add-apt-repository ppa:kgilmer/speed-ricer
 sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git
 sudo update-alternatives --config gdm3.css
 mkdir ~/repos && cd ~/repos
 git clone https://github.com/MarkHedleyJones/dotFiles.git
+git clone https://github.com/MarkHedleyJones/dmenu-extended.git
+cd dmenu-extended
+sudo python setup.py install
 ln -s ~/repos/dotFiles/i3 ~/.config
 ```
 
@@ -24,15 +28,6 @@ Colors, Untick "Use colors from system theme", Tango Dark
 gnome-tweaks
 ```
 Appearance, Applications -> Adwaita-dark
-
-### Dmenu-extended
-```
-mkdir ~/repos
-cd ~/repos
-git clone https://github.com/MarkHedleyJones/dmenu-extended.git
-cd dmenu-extended
-sudo python setup.py install
-```
 
 ## ROS
 ```
