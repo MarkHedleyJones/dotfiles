@@ -102,7 +102,7 @@ chmod 600 id_rsa
 ### General
 
 ```
-sudo apt-get install -y libpcl-dev pcl-tools cmake vim-gtk3
+sudo apt-get install -y libpcl-dev pcl-tools libopencv-dev cmake vim-gtk3 
 cd ~/repos
 git clone https://github.com/seqsense/ros_style.git
 ln -s ~/repos/ros_style/.clang-format ~/
