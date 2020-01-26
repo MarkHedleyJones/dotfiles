@@ -1,6 +1,9 @@
-# Dependencies
+# dotFiles
 
-This guide is intended to be run on Ubuntu 18.04
+This guide is intended to be run on Ubuntu 18.04.
+I use this guide to keep a consistent system configuration between machines and reduce setup-time on fresh installs.
+
+Please note: I use a Colmak keyboard layout and my i3 configuration is adjusted to suit this. 
 
 ## Window Manager (i3 & gnome-shell)
 This will install a vanilla gnome environment, i3-gaps, dmenu-extended and the configuration files from this repo.
@@ -20,9 +23,11 @@ ln -s ~/repos/dotFiles/.Xresources ~/.Xresources
 ### Configure gnome-terminal
 
 ```gnome-terminal```
-Right click gnome-terminal -> Profiles -> Profile Preferences.
-Text, Custom font, Terminus Regular size 13
-Colors, Untick "Use colors from system theme", Tango Dark
+
+* Right click -> Preferences.
+* Text, Custom font, Terminus Regular size 13
+* Colors, Untick "Use colors from system theme", Tango Dark
+* General -> untick *Show menubar by default in new terminals*
 
 ### Configure GTK-3
 ```
@@ -50,35 +55,31 @@ sudo apt-get update && sudo apt-get install -y sublime-text sublime-merge clang 
 subl
 ```
 Install Package Control then
-* ClangFormat
+* Clang Format
 * EasyClangComplete
-* Material Dark
-
+* Theme - Material Dark
 ```
-ln -s ~/repos/dotFiles/Preferences.sublime-settings ~/.config/sublime-text-3/Packages/User
+ln -fs ~/repos/dotFiles/Preferences.sublime-settings ~/.config/sublime-text-3/Packages/User
 ```
 
 ## Others
 ```
 sudo apt-get install -y gimp inkscape
-sudo apt-get remove apport
+sudo apt-get remove -y apport
 cd ~/Downloads
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 sudo dpkg -i google-chrome-stable_current_amd64.deb
 ```
 
 ### Japanese Language Support
-Add Japanese Language support in Gnome
-* Log into Gnome
-* Launch Language Support
-* Install / Remove Languages
-* Tick Japanese
+While in Gnome or Unity launch *Language Support*.
+If "The language support is not installed correctly" click Install.
+Otherwise, click *Install / Remove Languages* and enable Japanese
 
 ```
 sudo apt-get remove ibus*
 sudo apt-get install fcitx-mozc
 ```
-Log out and log back into Gnome.
 * Run "Input Method"
 * Hit OK
 * Select "Yes" to update the settings
@@ -89,33 +90,34 @@ Log out and log into i3:
 * Right-click Keyboard icon in system tray and click "Configure"
 * Global Config
 * Trigger Input Method set to "Super+Space"
-
+* Change *Share State Among Window* to *All*
+* *Input Method* -> Click *+* to add new input mode
+* Untick *Only Show Current Language*, add *Mozc*
 
 ### SSH Keys
 Fist, copy contents of SSH keys into `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`
 Then set permissions with:
 ```
-chmod 644 id_rsa.pub
-chmod 600 id_rsa
+chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 ```
+
 ## Dev tools
-
 ### General
-
 ```
-sudo apt-get install -y libpcl-dev pcl-tools libopencv-dev cmake vim-gtk3 
+sudo apt-get install -y libpcl-dev pcl-tools libopencv-dev cmake vim-gtk3
 cd ~/repos
 git clone https://github.com/seqsense/ros_style.git
 ln -s ~/repos/ros_style/.clang-format ~/
 git config --global user.name "Mark Hedley Jones"
 git config --global user.email "markhedleyjones@gmail.com"
 ```
+
 ### Docker
 ```
-sudo apt install apt-transport-https ca-certificates curl software-properties-common
+sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-sudo apt update && sudo apt install docker-ce
+sudo apt update && sudo apt-get install -y docker-ce
 sudo usermod -aG docker $USER
 ```
-Restart your computer to allow non-root execution of Docker
+Restart your computer to enable non-root execution of Docker
