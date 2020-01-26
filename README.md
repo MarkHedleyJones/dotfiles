@@ -12,8 +12,8 @@ sudo add-apt-repository ppa:kgilmer/speed-ricer
 sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git feh arandr
 sudo update-alternatives --config gdm3.css
 mkdir ~/repos && cd ~/repos
-git clone https://github.com/MarkHedleyJones/dotFiles.git
-git clone https://github.com/MarkHedleyJones/dmenu-extended.git
+git clone git@github.com:MarkHedleyJones/dotFiles.git
+git clone git@github.com:MarkHedleyJones/dmenu-extended.git
 cd dmenu-extended
 sudo python setup.py install
 ln -s ~/repos/dotFiles/i3 ~/.config
@@ -106,7 +106,7 @@ chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 ```
 sudo apt-get install -y libpcl-dev pcl-tools libopencv-dev cmake vim-gtk3
 cd ~/repos
-git clone https://github.com/seqsense/ros_style.git
+git clone git@github.com:seqsense/ros_style.git
 ln -s ~/repos/ros_style/.clang-format ~/
 git config --global user.name "Mark Hedley Jones"
 git config --global user.email "markhedleyjones@gmail.com"
