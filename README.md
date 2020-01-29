@@ -62,6 +62,7 @@ Install Package Control then
 * Theme - Material Dark
 ```
 ln -fs ~/repos/dotFiles/Preferences.sublime-settings ~/.config/sublime-text-3/Packages/User
+ln -fs ~/repos/dotFiles/snippet_cout.sublime-snippet ~/.config/sublime-text-3/Packages/User
 ```
 
 ## Others
