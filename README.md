@@ -112,6 +112,16 @@ git config --global user.name "Mark Hedley Jones"
 git config --global user.email "markhedleyjones@gmail.com"
 ```
 
+### Google Test
+```
+sudo apt-get install cmake libgtest-dev
+cd /usr/src/googletest/googletest
+sudo mkdir build && cd build
+sudo cmake .. && sudo make
+sudo cp libgtest.* /usr/lib/
+cd .. && sudo rm -rf build
+```
+
 ### Docker
 ```
 sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
