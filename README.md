@@ -27,7 +27,9 @@ ln -s ~/repos/dotFiles/.Xresources ~/.Xresources
 * Right click -> Preferences.
 * Text, Custom font, Terminus Regular size 13
 * Colors, Untick "Use colors from system theme", Tango Dark
+* Colours -> Background -> #263238 (Matches Sublime Material - Dark)
 * General -> untick *Show menubar by default in new terminals*
+
 
 ### Configure GTK-3
 ```
