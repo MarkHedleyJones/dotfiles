@@ -47,7 +47,7 @@ font-1 = unifont:fontformat=truetype:size=6:heavy;-2
 
 modules-left = i3
 modules-center = xwindow
-modules-right = xbacklight volume filesystem memory cpu wlan eth battery date powermenu
+modules-right = xbacklight volume filesystem memory cpu wlan eth battery date polypomo powermenu
 
 tray-position = right
 tray-padding = 2
@@ -63,6 +63,19 @@ scroll-down = i3wm-wsprev
 [module/xwindow]
 type = internal/xwindow
 label = %title:0:120:...%
+
+[module/polypomo]
+type = custom/script
+
+exec = ~/.config/i3/polybar/polypomo/polypomo
+tail = true
+
+label = %output%
+click-left = ~/.config/i3/polybar/polypomo/polypomo toggle
+click-right = ~/.config/i3/polybar/polypomo/polypomo end
+click-middle = ~/.config/i3/polybar/polypomo/polypomo lock
+scroll-up = ~/.config/i3/polybar/polypomo/polypomo time +60
+scroll-down = ~/.config/i3/polybar/polypomo/polypomo time -60
 
 [module/xkeyboard]
 type = internal/xkeyboard
