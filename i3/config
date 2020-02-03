@@ -46,16 +46,19 @@ bindsym XF86AudioRaiseVolume exec pactl set-sink-volume alsa_output.pci-0000_00_
 bindsym XF86AudioMute exec pactl set-sink-volume alsa_output.pci-0000_00_1b.0.analog-stereo 0
 bindsym XF86AudioLowerVolume exec pactl set-sink-volume alsa_output.pci-0000_00_1b.0.analog-stereo -2%
 bindsym Mod4+Escape exec i3lock -i ~/.config/i3/artwork/suzy-lock.png
-bindsym Mod4+c exec --no-startup-id gnome-terminal -e 'sh -c "ncal 2018 -wM && sleep infinity"'
+
+bindsym Mod4+c exec --no-startup-id gnome-terminal -e 'sh -c "ncal -wyMb && read input"' --class CALENDAR
+for_window [class="CALENDAR"] floating enable, resize grow left 0, resize grow right 0, resize grow up 170, resize grow down 170;
+
 #bindsym $mod+j exec xrandr -o left
 #bindsym $mod+k exec xrandr -o normal
 #bindkey 64+34$mod+0x5b exec xrandr -o left
 #byndkey 64+35$mod+0x5d exec xrandr -o normal
+
 # There also is the (new) i3-dmenu-desktop which only displays applications
 # shipping a .desktop file. It is a wrapper around dmenu, so you need that
 # installed.
 # bindsym $mod+d exec --no-startup-id i3-dmenu-desktop
-
 
 # disable gaps (i3-gaps)
 for_window [class="^.*"] border pixel 3
