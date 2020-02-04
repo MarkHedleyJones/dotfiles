@@ -107,12 +107,14 @@ chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 ## Dev tools
 ### General
 ```
-sudo apt-get install -y libpcl-dev pcl-tools libopencv-dev cmake vim-gtk3
+sudo apt-get install -y libpcl-dev pcl-tools libopencv-dev cmake vim-gtk3 clang-format
 cd ~/repos
 git clone git@github.com:seqsense/ros_style.git
 ln -s ~/repos/ros_style/.clang-format ~/
+ln -s ~/repos/dotFiles/bin ~/bin
 git config --global user.name "Mark Hedley Jones"
 git config --global user.email "markhedleyjones@gmail.com"
+echo "export PATH=\"\${PATH}:/home/mark/bin\"" >> ~/.bashrc
 ```
 
 ### Google Test

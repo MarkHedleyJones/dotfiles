@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# set -e
+
+if [ $# -ne 1 ];
+then
+  echo "Usage: $(basename $0) PATH"
+  exit 1
+fi
+
+echo "Running roslint (from ROS)"
+find $1 \( -name repos -o -name build \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print | xargs -n1 rosrun roslint cpplint --filter=-runtime/references,-build/c++11
+
+echo "Running format-lint"
+find format-lint \( -name repos -o -name build \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print | xargs -n1 $FORMAT_LINT
