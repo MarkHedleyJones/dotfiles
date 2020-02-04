@@ -70,8 +70,12 @@ class Timer:
         if not self.notified and self.time < 0:
             self.notified = True
             try:
+                call(["xsetroot", "-solid", "#52383B"],
+                     stdout=DEVNULL, stderr=DEVNULL)
+
                 call(["notify-send", "-t", "0", "-u", "critical", "Pomodoro",
                       "Timer reached zero"], stdout=DEVNULL, stderr=DEVNULL)
+
             except FileNotFoundError:
                 # Skip if notify-send isn't installed
                 pass
@@ -117,6 +121,9 @@ class Status:
 
     def next_timer(self):
         self.active = False
+
+        call(["xsetroot", "-solid", "#384A52"],
+             stdout=DEVNULL, stderr=DEVNULL)
 
         if self.status == "work":
             self.status = "break"
@@ -215,6 +222,8 @@ def action_display(args):
 
 def action_toggle(args):
     # TODO logging = print("Running toggle", args)
+    call(["xsetroot", "-solid", "#384A52"],
+         stdout=DEVNULL, stderr=DEVNULL)
     with setup_client() as s:
         msg = "toggle"
         s.send(msg.encode("utf8"))
