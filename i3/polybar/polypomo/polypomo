@@ -100,6 +100,9 @@ class Status:
 
     def toggle(self):
         self.active = not self.active
+        if self.active:
+            call(["xsetroot", "-solid", "#5E5E5E"],
+                 stdout=DEVNULL, stderr=DEVNULL)
 
     def toggle_lock(self):
         self.locked = not self.locked
