@@ -8,8 +8,10 @@ then
   exit 1
 fi
 
+format_lint=$(dirname $0)/format-lint
+
 echo "Running roslint (from ROS)"
-find $1 \( -name repos -o -name build \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print | xargs -n1 rosrun roslint cpplint --filter=-runtime/references,-build/c++11
+find $1 \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print | xargs -n1 rosrun roslint cpplint --filter=-runtime/references,-build/c++11
 
 echo "Running format-lint"
-find format-lint \( -name repos -o -name build \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print | xargs -n1 $FORMAT_LINT
+find $1 \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print | xargs -n1 ${format_lint}
