@@ -115,6 +115,7 @@ ln -s ~/repos/dotFiles/bin ~/bin
 git config --global user.name "Mark Hedley Jones"
 git config --global user.email "markhedleyjones@gmail.com"
 echo "export PATH=\"\${PATH}:/home/mark/bin\"" >> ~/.bashrc
+echo "alias cm='cd ~/catkin_ws ; catkin_make -j$(nproc); rospack profile ; source devel/setup.bash ; cd -'" >> ~/.bashrc
 ```
 
 ### Google Test
