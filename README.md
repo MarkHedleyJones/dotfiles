@@ -60,9 +60,21 @@ Install Package Control then
 * Clang Format
 * EasyClangComplete
 * Theme - Material Dark
+* Bracket Highlighter
+* JSON Reindent
+* Markdown Preview
+* PyYapf
+* Jedi
 ```
 ln -fs ~/repos/dotFiles/Preferences.sublime-settings ~/.config/sublime-text-3/Packages/User
 ln -fs ~/repos/dotFiles/snippet_cout.sublime-snippet ~/.config/sublime-text-3/Packages/User
+cd ~/repos
+git clone git@github.com:seqsense/ros_style.git
+ln -s ~/repos/ros_style/.clang-format ~/
+sudo pip install yapf
+mkdir -p ~/.config/yapf
+ln -s ~/repos/ros_style/.style.yapf ~/.config/yapf
+
 ```
 
 ## Others
@@ -110,7 +122,6 @@ chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 sudo apt-get install -y libpcl-dev pcl-tools libopencv-dev cmake vim-gtk3 clang-format
 cd ~/repos
 git clone git@github.com:seqsense/ros_style.git
-ln -s ~/repos/ros_style/.clang-format ~/
 ln -s ~/repos/dotFiles/bin ~/bin
 git config --global user.name "Mark Hedley Jones"
 git config --global user.email "markhedleyjones@gmail.com"
