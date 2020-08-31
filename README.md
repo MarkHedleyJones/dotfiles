@@ -85,6 +85,10 @@ cd ~/Downloads
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 sudo dpkg -i google-chrome-stable_current_amd64.deb
 ```
+Set the keybord repeat rate and delay
+```
+echo xset r rate 250 25 >> ~/.bashrc
+```
 
 ### Japanese Language Support
 While in Gnome or Unity launch *Language Support*.
