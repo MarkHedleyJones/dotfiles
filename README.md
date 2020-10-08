@@ -89,6 +89,10 @@ Set the keybord repeat rate and delay
 ```
 echo xset r rate 250 25 >> ~/.bashrc
 ```
+Sutup custom aliases for bash
+```
+echo "eval \"\$(cat ~/repos/dotFiles/aliases.sh)\"" >> ~/.bashrc
+```
 
 ### Japanese Language Support
 While in Gnome or Unity launch *Language Support*.
