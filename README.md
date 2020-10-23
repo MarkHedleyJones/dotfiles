@@ -87,12 +87,16 @@ sudo dpkg -i google-chrome-stable_current_amd64.deb
 ```
 Set the keybord repeat rate and delay
 ```
-echo xset r rate 250 25 >> ~/.bashrc
+echo xset r rate 200 25 >> ~/.bashrc
+echo setxkbmap -option "shift:both_capslock" >> ~/.bashrc
 ```
-Sutup custom aliases for bash
+Setup custom aliases for bash
 ```
 echo "eval \"\$(cat ~/repos/dotFiles/aliases.sh)\"" >> ~/.bashrc
 ```
+
+Alternatively, you can set double-shift as capslock by editing:
+`/etc/default/keyboard` and setting `XKBOPTIONS="shift:both_capslock"`
 
 ### Japanese Language Support
 While in Gnome or Unity launch *Language Support*.
