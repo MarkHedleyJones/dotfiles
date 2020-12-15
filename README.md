@@ -79,7 +79,7 @@ ln -s ~/repos/ros_style/.style.yapf ~/.config/yapf
 
 ## Others
 ```
-sudo apt-get install -y gimp inkscape
+sudo apt-get install -y gimp inkscape xclip
 sudo apt-get remove -y apport
 cd ~/Downloads
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
