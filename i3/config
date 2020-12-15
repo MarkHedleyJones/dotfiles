@@ -47,6 +47,9 @@ bindsym XF86AudioMute exec pactl set-sink-volume alsa_output.pci-0000_00_1b.0.an
 bindsym XF86AudioLowerVolume exec pactl set-sink-volume alsa_output.pci-0000_00_1b.0.analog-stereo -2%
 bindsym Mod4+Escape exec i3lock -i ~/.config/i3/artwork/suzy-lock.png
 
+bindsym ctrl+shift+m exec printf "$(date +%Y-%m-%d)" | xclip -selection c
+bindsym ctrl+shift+comma exec printf "$(date +%Y-W%V-%u)" | xclip -selection c
+
 bindsym Mod4+c exec --no-startup-id gnome-terminal -e 'sh -c "ncal -yMb && read input"' --class CALENDAR
 bindsym Mod4+x exec --no-startup-id gnome-terminal -e 'sh -c "htop"' --class HTOP
 for_window [class="CALENDAR"] floating enable, resize grow left 0, resize grow right 0, resize grow up 170, resize grow down 170;
