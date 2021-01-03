@@ -128,6 +128,26 @@ Then set permissions with:
 chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 ```
 
+### DCC Monitor Control
+Install DCCUtil
+
+    sudo apt-get install dccutil
+
+If using Nvidia drivers and xorg, copy Xorg config across (this adds rules to fix i2c bus from Nvidia cards)
+    
+    sudo mkdir -p /etc/X11/xorg.conf.d
+    sudo cp /usr/share/ddcutil/data/90-nvidia-i2c.conf /etc/X11/xorg.conf.d/
+
+Allow current user to access i2c devices (replace 'mark' with your username)
+
+    echo bash -c '"KERNEL==\"i2c-[0-9]*\", OWNER=\"mark\", MODE=\"0660\"" > /etc/udev/rules.d/45-ddcutil-i2c.rules'
+
+Restart
+
+
+
+
+
 ## Dev tools
 ### General
 ```
