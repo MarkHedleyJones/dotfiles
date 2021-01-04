@@ -5,3 +5,7 @@ alias cm='cd ~/catkin_ws ; catkin_make -j8; rospack profile ; source devel/setup
 alias sm='smerge --new-window .'
 alias st='subl --new-window .'
 alias oien='cd ~/repos/sq-slammer'
+
+xset r rate 150 25
+setxkbmap -option "shift:both_capslock"
+xmodmap -e "clear Lock"

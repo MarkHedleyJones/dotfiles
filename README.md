@@ -85,16 +85,9 @@ cd ~/Downloads
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 sudo dpkg -i google-chrome-stable_current_amd64.deb
 ```
-Set the keybord repeat rate and delay
-```
-echo xset r rate 150 25 >> ~/.bashrc
-echo setxkbmap -option \"shift:both_capslock\" >> ~/.bashrc
-echo xmodmap -e \"clear Lock\" >> ~/.bashrc
-```
-Setup custom aliases for bash
-```
-echo "eval \"\$(cat ~/repos/dotFiles/aliases.sh)\"" >> ~/.bashrc
-```
+Automaticaly call the custom bashrc script on bash start
+
+    echo "eval \"\$(cat ~/repos/dotFiles/bashrc_custom.sh)\"" >> ~/.bashrc
 
 Alternatively, you can set double-shift as capslock by editing:
 `/etc/default/keyboard` and setting `XKBOPTIONS="shift:both_capslock"`
