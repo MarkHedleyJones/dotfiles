@@ -49,28 +49,36 @@ bindsym Mod4+Escape exec i3lock -i ~/.config/i3/artwork/suzy-lock.png
 
 # Monitor control
 
-# Colour temperature
-# 5000k
-bindsym $mod+ctrl+shift+j exec ddcutil --bus=1 setvcp 14 0x04
+# Opcodes
+# 14 = Color temperature
+# 10 = Brightness
+# 12 = Contrast
 
-# 6500
-bindsym $mod+ctrl+shift+l exec ddcutil --bus=1 setvcp 14 0x05
+# Colour temperatures
+# 5000k  = 0x04
+# 5700k  = 0x0B
+# 6500k  = 0x05
+# 7500k  = 0x06
+# 9300k  = 0x08
+# 10000k = 0x09
 
-# 7500k
-bindsym $mod+ctrl+shift+u exec ddcutil --bus=1 setvcp 14 0x06
+# Hotkeys
+# l - Full daylight
+# u - Daylight / light mix
+# y - Lights
+# ; - Dark mode
 
-# 9300k
-bindsym $mod+ctrl+shift+y exec ddcutil --bus=1 setvcp 14 0x08
+# l = 9300k, 100% brightness, 75% contrast
+bindsym $mod+ctrl+l exec ddcutil --bus=1 setvcp 14 0x06 && ddcutil --bus=1 setvcp 10 100 && ddcutil --bus=1 setvcp 12 75
 
-# 100000k
-bindsym $mod+ctrl+shift+semicolon exec ddcutil --bus=1 setvcp 14 0x09
+# u = 7500k, 60% brightness, 50% contrast
+bindsym $mod+ctrl+u exec ddcutil --bus=1 setvcp 14 0x05 && ddcutil --bus=1 setvcp 10 60 && ddcutil --bus=1 setvcp 12 50
 
-# Brightness
-bindsym $mod+ctrl+j exec ddcutil --bus=1 setvcp 10 1
-bindsym $mod+ctrl+l exec ddcutil --bus=1 setvcp 10 25
-bindsym $mod+ctrl+u exec ddcutil --bus=1 setvcp 10 50
-bindsym $mod+ctrl+y exec ddcutil --bus=1 setvcp 10 75
-bindsym $mod+ctrl+semicolon exec ddcutil --bus=1 setvcp 10 100
+# y = 6500k, 20% brightness, 50% contrast
+bindsym $mod+ctrl+y exec ddcutil --bus=1 setvcp 14 0x0B && ddcutil --bus=1 setvcp 10 20 && ddcutil --bus=1 setvcp 12 50
+
+# ; = 5000k, 1% brightness, 30% contrast
+bindsym $mod+ctrl+semicolon exec ddcutil --bus=1 setvcp 14 0x04 && ddcutil --bus=1 setvcp 10 1 && ddcutil --bus=1 setvcp 12 30
 
 bindsym ctrl+shift+comma exec printf "$(date +%F)" | xclip -selection c
 bindsym ctrl+shift+m exec printf "$(date +%Y-W%V-%u)" | xclip -selection c
