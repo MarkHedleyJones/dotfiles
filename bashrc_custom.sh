@@ -6,6 +6,6 @@ alias sm='smerge --new-window .'
 alias st='subl --new-window .'
 alias oien='cd ~/repos/sq-slammer'
 
-xset r rate 150 25
+xset r rate 175 25
 setxkbmap -option "shift:both_capslock"
 xmodmap -e "clear Lock"
