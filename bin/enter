@@ -1,0 +1,9 @@
+#!/bin/bash
+
+image=$(basename $(pwd))
+
+docker exec \
+    --interactive \
+    --tty \
+    ${image} \
+    /bin/bash

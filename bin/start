@@ -1,0 +1,38 @@
+#!/bin/bash
+
+image=$(basename $(pwd))
+tag=latest
+
+xsock=/tmp/.X11-unix
+xauth=/tmp/.docker.xauth
+touch $xauth
+xauth nlist ${DISPLAY} | sed -e 's/^..../ffff/' | xauth -f ${xauth} nmerge -
+
+docker_args_display="-e DISPLAY "
+docker_args_display+="-e XAUTHORITY=${xauth} "
+docker_args_display+="-v ${xauth}:${xauth}:rw "
+docker_args_display+="-v ${xsock}:${xsock}:rw "
+docker_args_display+="--gpus=all "
+docker_args_display+="-e NVIDIA_DRIVER_CAPABILITIES=all "
+docker_args_display+="--env QT_X11_NO_MITSHM=1 "
+
+# Setup the workspace
+local_workspace="$(pwd)/workspace"
+image_workspace="/ws"
+if [[ ! -d ${local_workspace} ]]; then
+    mkdir -p ${local_workspace}
+fi
+docker_args_workdir="-v ${local_workspace}:${image_workspace} "
+docker_args_workdir+="--env WORKDIR=${image_workspace} "
+docker_args_workdir+="--workdir=${image_workspace} "
+
+exec docker run \
+    --interactive \
+    --tty \
+    --rm \
+    --privileged \
+    --net=host \
+    ${docker_args_workdir} \
+    ${docker_args_display} \
+    ${image}:${tag} \
+    /bin/bash
