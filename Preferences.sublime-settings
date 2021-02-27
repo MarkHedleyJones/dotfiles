@@ -30,6 +30,7 @@
 		120
 	],
 	"smart_indent": true,
+	"sublime_merge_path": "/run/current-system/sw/bin/sublime_merge",
 	"tab_size": 2,
 	"theme": "Dark-Material.sublime-theme",
 	"translate_tabs_to_spaces": true,
