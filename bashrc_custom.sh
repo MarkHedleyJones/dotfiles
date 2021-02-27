@@ -10,5 +10,5 @@ alias dir-sys='cd ~/repos/nixos-configuration'
 alias merge-sys='sublime_merge ~/repos/nixos-configuration --new-window'
 
 xset r rate 175 25
-setxkbmap -option "shift:both_capslock"
-xmodmap -e "clear Lock"
+# setxkbmap -option "shift:both_capslock"
+# xmodmap -e "clear Lock"
