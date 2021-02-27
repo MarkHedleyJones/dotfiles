@@ -64,7 +64,7 @@ Install Package Control then
 * JSON Reindent
 * Markdown Preview
 * PyYapf
-* Jedi
+* Jedi - Python Autocompletion
 ```
 ln -fs ~/repos/dotFiles/Preferences.sublime-settings ~/.config/sublime-text-3/Packages/User
 ln -fs ~/repos/dotFiles/snippet_cout.sublime-snippet ~/.config/sublime-text-3/Packages/User
@@ -151,7 +151,7 @@ git clone git@github.com:seqsense/ros_style.git
 ln -s ~/repos/dotFiles/bin ~/bin
 git config --global user.name "Mark Hedley Jones"
 git config --global user.email "markhedleyjones@gmail.com"
-echo "export PATH=\"\${PATH}:/home/mark/bin\"" >> ~/.bashrc
+echo "export PATH=\"\${PATH}:/home/mark/.local/bin\"" >> ~/.bashrc
 echo "alias cm='cd ~/catkin_ws ; catkin_make -j$(nproc); rospack profile ; source devel/setup.bash ; cd -'" >> ~/.bashrc
 ```
 
