@@ -11,5 +11,5 @@ alias merge-dot='sublime_merge ~/repos/dotFiles --new-window'
 alias aliases='subl ~/repos/dotFiles/bashrc_custom.sh --new-window'
 
 xset r rate 175 25
-setxkbmap -option "shift:both_capslock"
-xmodmap -e "clear Lock"
+# setxkbmap -option "shift:both_capslock"
+# xmodmap -e "clear Lock"
