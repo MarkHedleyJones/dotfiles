@@ -36,7 +36,7 @@ bindsym $mod+Return exec gnome-terminal
 bindsym $mod+q kill
 
 # start dmenu (a program launcher)
-bindsym $mod+s exec dmenu_extended_run
+bindsym $mod+s exec python /home/mark/.local/bin/dmenu_extended_run
 
 bindsym XF86WWW exec firefox
 bindsym XF86HomePage exec firefox
