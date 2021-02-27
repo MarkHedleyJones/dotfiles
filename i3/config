@@ -243,12 +243,12 @@ exec_always --no-startup-id $HOME/.config/i3/polybar.sh
 exec --no-startup-id xsetroot -solid "#384A52"
 exec --no-startup-id nm-applet
 exec --no-startup-id gnome-keyring-daemon
-exec --no-startup-id /usr/lib/gnome-settings-daemon/gsd-xsettings
 exec --no-startup-id fcitx --replace
 exec --no-startup-id xrdb ~/.Xresources
 exec --no-startup-id xset r rate 200 20
 exec --no-startup-id setxkbmap -option "shift:both_capslock"
 exec --no-startup-id ~/.config/i3/launch-ssh-agent.sh
+exec --no-startup-id /run/current-system/sw/libexec/gsd-xsettings
 
 client.focused #0088CC #0088CC #ffffff #dddddd
 client.focused_inactive #333333 #333333 #888888 #292d2e
