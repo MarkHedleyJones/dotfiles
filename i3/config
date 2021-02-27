@@ -38,8 +38,8 @@ bindsym $mod+q kill
 # start dmenu (a program launcher)
 bindsym $mod+s exec dmenu_extended_run
 
-bindsym XF86WWW exec google-chrome
-bindsym XF86HomePage exec google-chrome
+bindsym XF86WWW exec firefox
+bindsym XF86HomePage exec firefox
 bindsym XF86Explorer exec nautilus
 bindsym Shift+XF86Explorer exec sudo pm-suspend-hybrid
 bindsym XF86AudioRaiseVolume exec pactl set-sink-volume 0 +2%
