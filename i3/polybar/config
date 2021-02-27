@@ -236,14 +236,15 @@ date-alt = " %Y-%m-%d"
 time = %H:%M
 time-alt = %H:%M:%S
 
-format-prefix = 
+#format-prefix = 
 format-prefix-foreground = ${colors.foreground-alt}
 format-underline =
 
 label = %date% %time%
 
 [module/volume]
-type = internal/volume
+type = internal/pulseaudio
+sink = alsa_output.pci-0000_01_00.1.hdmi-stereo
 
 format-volume = <label-volume> <bar-volume>
 label-volume = Volume
