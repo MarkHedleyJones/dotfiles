@@ -245,6 +245,7 @@ exec --no-startup-id ibus-daemon  --replace --daemonize
 exec --no-startup-id nm-applet
 exec --no-startup-id volumeicon
 exec --no-startup-id clipit
+exec --no-startup-id picom --config /home/mark/.config/i3/compton.conf
 exec --no-startup-id xset r rate 200 20
 exec --no-startup-id /run/current-system/sw/libexec/gsd-xsettings
 
