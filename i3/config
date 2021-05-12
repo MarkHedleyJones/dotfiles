@@ -42,9 +42,9 @@ bindsym XF86WWW exec firefox
 bindsym XF86HomePage exec firefox
 bindsym XF86Explorer exec nautilus
 bindsym Shift+XF86Explorer exec sudo pm-suspend-hybrid
-bindsym XF86AudioRaiseVolume exec pactl set-sink-volume 0 +2%
-bindsym XF86AudioMute exec pactl set-sink-volume 0 0
-bindsym XF86AudioLowerVolume exec pactl set-sink-volume 0 -2%
+bindsym XF86AudioRaiseVolume exec pactl set-sink-volume $(pactl list sinks short | cut -f 1) +2%
+bindsym XF86AudioMute exec pactl set-sink-volume $(pactl list sinks short | cut -f 1) 0
+bindsym XF86AudioLowerVolume exec pactl set-sink-volume $(pactl list sinks short | cut -f 1) -2%
 bindsym Mod4+Escape exec i3lock -i ~/.config/i3/artwork/suzy-lock.png
 
 # Monitor control
