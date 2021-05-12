@@ -104,7 +104,7 @@ for_window [class="HTOP"] floating enable, fullscreen enable;
 # bindsym $mod+d exec --no-startup-id i3-dmenu-desktop
 
 # disable gaps (i3-gaps)
-for_window [class="^.*"] border pixel 3
+for_window [class="^.*"] border pixel 2
 gaps outer 0
 gaps inner 50
 bindcode Mod4+21 gaps inner current plus 5
