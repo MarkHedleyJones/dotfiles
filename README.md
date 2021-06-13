@@ -8,16 +8,9 @@ Please note: I use a Colmak keyboard layout and my i3 configuration is adjusted 
 ## Window Manager (i3 & gnome-shell)
 This will install a vanilla gnome environment, i3-gaps, dmenu-extended and the configuration files from this repo.
 ```
-sudo add-apt-repository ppa:kgilmer/speed-ricer
-sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git feh arandr
-sudo update-alternatives --config gdm3.css
-mkdir ~/repos && cd ~/repos
-git clone git@github.com:MarkHedleyJones/dotFiles.git
-git clone git@github.com:MarkHedleyJones/dmenu-extended.git
-cd dmenu-extended
-sudo python setup.py install
+sudo pacman -S i3-gaps i3lock i3status i3blocks network-manager-applet xorg-xsetroot terminus-font arandr
+sudo yay -S polybar dmenu-extended-git
 ln -s ~/repos/dotFiles/i3 ~/.config
-ln -s ~/repos/dotFiles/.Xresources ~/.Xresources
 ```
 
 ### Configure gnome-terminal
@@ -39,27 +32,19 @@ Appearance, Applications -> Adwaita-dark
 
 ## ROS
 ```
-sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
-sudo apt-get update && sudo apt-get install -y ros-melodic-desktop-full
+yay -S --sudoloop --noconfirm ros-noetic-desktop-full
+echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 sudo rosdep init
 rosdep update
-echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
-sudo apt-get install -y python-rosinstall python-rosinstall-generator python-wstool build-essential
 ```
 
 ## Sublime Text
 ```
-sudo apt-get install -y apt-transport-https
-wget -qO - https://download.sublimetext.com/sublimehq-pub.gpg | sudo apt-key add -
-echo "deb https://download.sublimetext.com/ apt/stable/" | sudo tee /etc/apt/sources.list.d/sublime-text.list
-sudo apt-get update && sudo apt-get install -y sublime-text sublime-merge clang clang-format
-subl
+sudo pacman -S sublime-text sublime-merge
 ```
 Install Package Control then
 * Clang Format
 * EasyClangComplete
-* Theme - Material Dark
 * Bracket Highlighter
 * JSON Reindent
 * Markdown Preview
@@ -80,11 +65,7 @@ ln -s ~/repos/ros_style/.style.yapf ~/.config/yapf
 
 ## Others
 ```
-sudo apt-get install -y gimp inkscape xclip
-sudo apt-get remove -y apport
-cd ~/Downloads
-wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-sudo dpkg -i google-chrome-stable_current_amd64.deb
+sudo pacman -S gimp inkscape xclip blender htop gpick ranger
 ```
 Automaticaly call the custom bashrc script on bash start
 
@@ -94,27 +75,11 @@ Alternatively, you can set double-shift as capslock by editing:
 `/etc/default/keyboard` and setting `XKBOPTIONS="shift:both_capslock"`
 
 ### Japanese Language Support
-While in Gnome or Unity launch *Language Support*.
-If "The language support is not installed correctly" click Install.
-Otherwise, click *Install / Remove Languages* and enable Japanese
 
 ```
-sudo apt-get remove ibus*
-sudo apt-get install fcitx-mozc
+yay -S ibus-mozc 
+pacman -S otf-ipamjfont otf-ipaexfont adobe-source-han-sans-jp-fonts adobe-source-han-serif-jp-fonts otf-ipafont ttf-hanazono
 ```
-* Run "Input Method"
-* Hit OK
-* Select "Yes" to update the settings
-* Select fcitx and select OK.
-* Confirm the settings by cliking OK.
-
-Log out and log into i3:
-* Right-click Keyboard icon in system tray and click "Configure"
-* Global Config
-* Trigger Input Method set to "Super+Space"
-* Change *Share State Among Window* to *All*
-* *Input Method* -> Click *+* to add new input mode
-* Untick *Only Show Current Language*, add *Mozc*
 
 ### SSH Keys
 Fist, copy contents of SSH keys into `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`
@@ -126,7 +91,7 @@ chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 ### DCC Monitor Control
 Install DCCUtil
 
-    sudo apt-get install dccutil
+    sudo pacman -S ddcutil
 
 If using Nvidia drivers and xorg, copy Xorg config across (this adds rules to fix i2c bus from Nvidia cards)
     
@@ -140,8 +105,12 @@ Allow current user to access i2c devices (replace 'mark' with your username)
 Restart
 
 
-
-
+### 3D Mouse
+`
+   yay -S spacenavd
+   sudo systemctl enable spacenavd
+   sudo systemctl start spacenavd
+`
 
 ## Dev tools
 ### General
