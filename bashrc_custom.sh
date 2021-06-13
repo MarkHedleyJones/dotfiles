@@ -9,6 +9,7 @@ alias edit-dot='subl ~/repos/dotFiles --new-window'
 alias dir-dot='cd ~/repos/dotFiles'
 alias merge-dot='sublime_merge ~/repos/dotFiles --new-window'
 alias aliases='subl ~/repos/dotFiles/bashrc_custom.sh --new-window'
+alias cal='cal --iso --week -3'
 
 xset r rate 175 25
 setxkbmap -option "shift:both_capslock"
