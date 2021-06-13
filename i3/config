@@ -248,6 +248,7 @@ exec --no-startup-id xrdb ~/.Xresources
 exec --no-startup-id xset r rate 200 20
 exec --no-startup-id setxkbmap -option "shift:both_capslock"
 exec --no-startup-id ~/.config/i3/launch-ssh-agent.sh
+exec --no-startup-id xset dpms 0 0 0 && xset -dpms && xset s off && xset 0 noblank
 
 client.focused #0088CC #0088CC #ffffff #dddddd
 client.focused_inactive #333333 #333333 #888888 #292d2e
