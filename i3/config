@@ -242,8 +242,8 @@ exec_always --no-startup-id $HOME/.config/i3/polybar.sh
 exec --no-startup-id xsetroot -solid "#384A52"
 exec --no-startup-id nm-applet
 exec --no-startup-id gnome-keyring-daemon
-exec --no-startup-id fcitx --replace
 exec --no-startup-id /usr/lib/gsd-xsettings
+exec --no-startup-id ibus-daemon --daemonize --replace
 exec --no-startup-id xrdb ~/.Xresources
 exec --no-startup-id xset r rate 200 20
 exec --no-startup-id setxkbmap -option "shift:both_capslock"
