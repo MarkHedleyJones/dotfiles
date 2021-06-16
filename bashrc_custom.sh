@@ -13,6 +13,20 @@ alias cal='cal --iso --week -3'
 
 xset r rate 175 25
 setxkbmap -option "shift:both_capslock"
+
+if [ -f ~/.ssh/agent.env ] ; then
+    . ~/.ssh/agent.env > /dev/null
+    if ! kill -0 $SSH_AGENT_PID > /dev/null 2>&1; then
+        echo "Stale agent file found. Spawning a new agent. "
+        eval `ssh-agent | tee ~/.ssh/agent.env`
+        ssh-add
+    fi
+else
+    echo "Starting ssh-agent"
+    eval `ssh-agent | tee ~/.ssh/agent.env`
+    ssh-add
+fi
+
 # xmodmap -e "clear Lock"
 
 
