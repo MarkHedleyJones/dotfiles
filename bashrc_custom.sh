@@ -1,5 +1,6 @@
-#! /bin/bash
-# These are custom aliases
+#!/usr/bin/env bash
+
+# Custom aliases
 alias arst='subl --new-window . && smerge --new-window .'
 alias cm='cd ~/catkin_ws ; catkin_make -j8; rospack profile ; source devel/setup.bash ; cd -'
 alias sm='smerge --new-window .'
