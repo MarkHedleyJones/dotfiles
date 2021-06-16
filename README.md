@@ -8,9 +8,10 @@ Please note: I use a Colmak keyboard layout and my i3 configuration is adjusted 
 ## Window Manager (i3 & gnome-shell)
 This will install a vanilla gnome environment, i3-gaps, dmenu-extended and the configuration files from this repo.
 ```
-sudo pacman -S i3-gaps i3lock i3status i3blocks network-manager-applet xorg-xsetroot terminus-font arandr
+sudo pacman -S i3-gaps i3lock i3status i3blocks network-manager-applet xorg-xsetroot terminus-font arandr gsimplecal xorg-xauth xorg-xev
 sudo yay -S polybar dmenu-extended-git
 ln -s ~/repos/dotFiles/i3 ~/.config
+ln -s ~/repos/dotFiles/.config/gsimplecal ~/.config
 ```
 
 ### Configure gnome-terminal
