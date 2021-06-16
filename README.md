@@ -125,14 +125,6 @@ echo "export PATH=\"\${PATH}:/home/mark/.local/bin\"" >> ~/.bashrc
 echo "alias cm='cd ~/catkin_ws ; catkin_make -j$(nproc); rospack profile ; source devel/setup.bash ; cd -'" >> ~/.bashrc
 ```
 
-### Google Test
-```
-sudo apt-get install cmake libgtest-dev
-cd /usr/src/googletest/googletest
-sudo mkdir build && cd build
-sudo cmake .. && sudo make && sudo make install
-cd .. && sudo rm -rf build
-```
 
 ### Docker
 ```
