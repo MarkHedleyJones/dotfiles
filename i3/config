@@ -88,7 +88,7 @@ bindsym ctrl+shift+comma exec printf "$(date +%F)" | xclip -selection c
 bindsym ctrl+shift+m exec printf "$(date +%Y-W%V-%u)" | xclip -selection c
 bindsym ctrl+shift+b exec printf "$(date +%Y-W%V-%u) ($(date +%F))" | xclip -selection c
 
-bindsym Mod4+c exec --no-startup-id gnome-terminal -e 'sh -c "ncal -yMb && read input"' --class CALENDAR
+bindsym Mod4+c exec --no-startup-id gnome-calculator
 bindsym Mod4+x exec --no-startup-id gnome-terminal -e 'sh -c "htop"' --class HTOP
 for_window [class="CALENDAR"] floating enable, resize grow left 0, resize grow right 0, resize grow up 170, resize grow down 170;
 for_window [class="HTOP"] floating enable, fullscreen enable;
