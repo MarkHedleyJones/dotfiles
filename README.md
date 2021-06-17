@@ -14,6 +14,13 @@ ln -s ~/repos/dotFiles/i3 ~/.config
 ln -s ~/repos/dotFiles/.config/gsimplecal ~/.config
 ```
 
+### General tools
+```
+sudo pacman -S meld
+
+```
+
+
 ### Configure gnome-terminal
 
 ```gnome-terminal```
