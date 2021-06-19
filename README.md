@@ -18,7 +18,7 @@ Install the GB, JP, and NZ locales!
 
 ### General tools
 ```
-sudo pacman -S meld
+sudo pacman -S meld ipython
 
 ```
 
