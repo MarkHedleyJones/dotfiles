@@ -6,10 +6,10 @@ alias cm='cd ~/catkin_ws ; catkin_make -j8; rospack profile ; source devel/setup
 alias sm='smerge --new-window .'
 alias st='subl --new-window .'
 alias oien='cd ~/repos/'
-alias dot-edit='subl ~/repos/dotFiles --new-window'
-alias dot-dir='cd ~/repos/dotFiles'
-alias dot-merge='sublime_merge ~/repos/dotFiles --new-window'
-alias bashrc-edit='subl ~/repos/dotFiles/bashrc_custom.sh --new-window'
+alias edit-dot='subl ~/repos/dotFiles --new-window'
+alias dir-dot='cd ~/repos/dotFiles'
+alias merge-dot='smerge ~/repos/dotFiles --new-window'
+alias edit-bashrc='subl ~/repos/dotFiles/bashrc_custom.sh --new-window'
 alias cal='cal --iso --week -3'
 
 xset r rate 175 25
