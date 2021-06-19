@@ -14,6 +14,8 @@ ln -s ~/repos/dotFiles/i3 ~/.config
 ln -s ~/repos/dotFiles/.config/gsimplecal ~/.config
 ```
 
+Install the GB, JP, and NZ locales!
+
 ### General tools
 ```
 sudo pacman -S meld
