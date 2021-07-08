@@ -64,6 +64,7 @@ Install Package Control then
 * JSON Reindent
 * Markdown Preview
 * PyYapf
+* LiveReload
 * Jedi - Python Autocompletion
 ```
 ln -fs ~/repos/dotFiles/Preferences.sublime-settings ~/.config/sublime-text-3/Packages/User
