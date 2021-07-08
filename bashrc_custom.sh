@@ -14,3 +14,20 @@ alias cal='cal --iso --week -3'
 xset r rate 175 25
 setxkbmap -option "shift:both_capslock"
 # xmodmap -e "clear Lock"
+
+
+# From https://mhoffman.github.io/2015/05/21/how-to-navigate-directories-with-the-shell.html
+alias ..="cd .."
+alias ...="cd ../.."
+alias ....="cd ../../.."
+alias .....="cd ../../../.."
+alias ......="cd ../../../../.."
+alias .......="cd ../../../../../.."
+alias ........="cd ../../../../../../.."
+alias .........="cd ../../../../../../../.."
+alias ..........="cd ../../../../../../../../.."
+alias ...........="cd ../../../../../../../../../.."
+alias ............="cd ../../../../../../../../../../.."
+alias .............="cd ../../../../../../../../../../../.."
+
+export CDPATH=".:$HOME:$HOME/repos"
