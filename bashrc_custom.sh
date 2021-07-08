@@ -9,7 +9,7 @@ alias oien='cd ~/repos/'
 alias edit-dot='subl ~/repos/dotFiles --new-window'
 alias dir-dot='cd ~/repos/dotFiles'
 alias merge-dot='smerge ~/repos/dotFiles --new-window'
-alias edit-bashrc='subl ~/repos/dotFiles/bashrc_custom.sh --new-window'
+alias edit-bash='subl ~/repos/dotFiles/bashrc_custom.sh --new-window'
 alias cal='cal --iso --week -3'
 
 xset r rate 175 25
