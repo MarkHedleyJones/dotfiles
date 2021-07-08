@@ -12,6 +12,10 @@ alias merge-dot='smerge ~/repos/dotFiles --new-window'
 alias edit-bash='subl ~/repos/dotFiles/bashrc_custom.sh --new-window'
 alias cal='cal --iso --week -3'
 
+
+alias la='ls -l --human-readable --almost-all --hyperlink --no-group --time-style +"%Y-W%V-%u %X"'
+alias ll='ls -l --human-readable --hyperlink --no-group --time-style +"%Y-W%V-%u %X"'
+
 xset r rate 175 25
 setxkbmap -option "shift:both_capslock"
 
