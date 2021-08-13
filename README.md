@@ -1,6 +1,6 @@
 # dotFiles
 
-This guide is intended to be run on Ubuntu 18.04.
+This guide is intended to be run on Arch Linux.
 I use this guide to keep a consistent system configuration between machines and reduce setup-time on fresh installs.
 
 Please note: I use a Colmak keyboard layout and my i3 configuration is adjusted to suit this. 
