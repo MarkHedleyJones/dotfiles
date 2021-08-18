@@ -1,19 +1,28 @@
 #!/usr/bin/env bash
 
-if [ $# -ne 1 ];
-then
-  echo "Usage: $(basename $0) PATH"
+if [ $# -eq 0 ]; then
+  base_path=$(pwd)
+elif [ $# -eq 1 ]; then
+  base_path=$1
+else
+  echo "Usage: $(basename $0) [PATH]"
   exit 1
 fi
 
-files_to_check=($(find ${1} \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print))
+cpp_files_to_check=($(find ${base_path} \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print))
+python_files_to_check=($(find ${base_path} \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.py' \) -print))
 
 echo "Running roslint (from ROS)"
-for file_path in ${files_to_check[*]}; do
+for file_path in ${cpp_files_to_check[*]}; do
   cpplint ${file_path}
 done
 
 echo "Running format-lint"
-for file_path in ${files_to_check[*]}; do
+for file_path in ${cpp_files_to_check[*]}; do
   format-lint ${file_path}
+done
+
+echo "Running pycodestyle"
+for file_path in ${python_files_to_check[*]}; do
+  pycodestyle ${file_path}
 done
