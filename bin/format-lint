@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 
-TMPFILE=/tmp/`basename $1`.format.cpp
+TMPFILE=/tmp/`basename ${1}`.format.cpp
 
-#echo "clang-format -style=file $1 > $TMPFILE"
-
-clang-format -style=file $1 > $TMPFILE
-diff -u $1 $TMPFILE > $TMPFILE.diff
+clang-format-11 -style=file ${1} > $TMPFILE
+diff -u ${1} $TMPFILE > $TMPFILE.diff
 
 if [ `cat $TMPFILE.diff | wc -l` -ne 0 ]
 then
-  echo "Format error in $1"
+  echo "Format error in ${1}"
   cat $TMPFILE.diff
   exit 1
 fi
