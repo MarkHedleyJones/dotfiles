@@ -82,10 +82,10 @@ Install Package Control then
 * Bracket Highlighter
 * JSON Reindent
 * Markdown Preview
-* PyYapf
+* PyYapf - Python Formatter
 * python-black
 * LiveReload
-* Jedi - Python Autocompletion
+* Jedi - Python autocompletion
 ```
 ln -fs ~/repos/dotfiles/Preferences.sublime-settings ~/.config/sublime-text/Packages/User
 ln -fs ~/repos/dotfiles/snippet_cout.sublime-snippet ~/.config/sublime-text/Packages/User
