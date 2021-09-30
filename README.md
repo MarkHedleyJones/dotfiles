@@ -17,7 +17,7 @@ chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 This will install a vanilla gnome environment, i3-gaps, dmenu-extended and the configuration files from this repo.
 ```
 sudo add-apt-repository ppa:kgilmer/speed-ricer
-sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git feh arandr python-is-python3 vim python3-pip fonts-terminus
+sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git feh arandr python-is-python3 vim python3-pip fonts-terminus curl
 mkdir ~/repos && cd ~/repos
 git clone git@github.com:MarkHedleyJones/dotfiles.git
 git clone git@github.com:MarkHedleyJones/dmenu-extended.git
