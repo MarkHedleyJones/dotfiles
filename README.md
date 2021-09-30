@@ -17,8 +17,7 @@ chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 This will install a vanilla gnome environment, i3-gaps, dmenu-extended and the configuration files from this repo.
 ```
 sudo add-apt-repository ppa:kgilmer/speed-ricer
-sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git feh arandr python-is-python3 vim python3-pip
-sudo update-alternatives --config gdm3.css
+sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git feh arandr python-is-python3 vim python3-pip fonts-terminus
 mkdir ~/repos && cd ~/repos
 git clone git@github.com:MarkHedleyJones/dotfiles.git
 git clone git@github.com:MarkHedleyJones/dmenu-extended.git
@@ -34,6 +33,12 @@ sudo ln -s ../conf.avail/70-force-bitmaps.conf /etc/fonts/conf.d/
 sudo dpkg-reconfigure fontconfig-config
 sudo dpkg-reconfigure fontconfig
 ```
+Install dotfiles
+```
+~/repos/dotfiles/install.sh
+```
+You should be able to log-out and log-in to an i3 session now.
+
 
 ### Configure gnome-terminal
 
@@ -43,8 +48,7 @@ gnome-terminal
 
 * Right click -> Preferences.
 * Text, Custom font, Terminus Regular size 13
-* Colors, Untick "Use colors from system theme", Tango Dark
-* Colours -> Background -> #263238 (Matches Sublime Material - Dark)
+* Colours, Untick "Use colors from system theme", Tango Dark
 * General -> untick *Show menubar by default in new terminals*
 
 
