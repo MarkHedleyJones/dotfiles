@@ -116,7 +116,7 @@ If "The language support is not installed correctly" click Install.
 Otherwise, click *Install / Remove Languages* and enable Japanese
 
 ```
-sudo apt-get remove ibus*
+~~sudo apt-get remove ibus*~~
 sudo apt-get install fcitx-mozc
 ```
 * Run "Input Method"
