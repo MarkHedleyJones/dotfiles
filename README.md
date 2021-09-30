@@ -158,13 +158,8 @@ Restart
 ### General
 ```
 sudo apt-get install -y libpcl-dev pcl-tools libopencv-dev cmake vim-gtk3 clang-format
-cd ~/repos
-git clone git@github.com:seqsense/ros_style.git
-ln -s ~/repos/dotfiles/bin ~/bin
 git config --global user.name "Mark Hedley Jones"
 git config --global user.email "markhedleyjones@gmail.com"
-echo "export PATH=\"\${PATH}:/home/mark/.local/bin\"" >> ~/.bashrc
-echo "alias cm='cd ~/catkin_ws ; catkin_make -j$(nproc); rospack profile ; source devel/setup.bash ; cd -'" >> ~/.bashrc
 ```
 
 
