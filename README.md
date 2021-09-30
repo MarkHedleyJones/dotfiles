@@ -102,7 +102,6 @@ ln -s ~/repos/ros_style/.style.yapf ~/.config/yapf
 ```
 sudo apt-get install -y gimp inkscape xclip
 sudo apt-get remove -y apport
-cd ~/Downloads
 ```
 Automaticaly call the custom bashrc script on bash start
 
