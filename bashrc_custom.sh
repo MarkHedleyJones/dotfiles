@@ -11,6 +11,7 @@ alias merge-dot="sublime_merge ~/repos/dotfiles --new-window"
 
 alias arst="subl --new-window . && smerge --new-window ."
 alias cm="cd ~/catkin_ws ; catkin_make -j$(nproc); rospack profile ; source devel/setup.bash ; cd -"
+alias cs="source ~/catkin_ws/devel/setup.bash"
 alias sm="smerge --new-window ."
 alias st="subl --new-window ."
 
