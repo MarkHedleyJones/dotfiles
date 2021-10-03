@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-alias aliases="subl ~/repos/dotfiles/bashrc_custom.sh --new-window"
+alias aliases="vim ~/repos/dotfiles/bashrc_custom.sh"
+alias eb="vim ~/.bashrc"
 
 # alias cal="cal --iso --week -3"
 alias cal="ncal -w3Mb"
@@ -18,6 +19,7 @@ alias st="subl --new-window ."
 alias c="cd ~/catkin_ws"
 alias s="cd ~/repos/seqsense"
 alias d='cd ~/repos/dotfiles'
+alias r='cd ~/repos'
 
 xset r rate 175 25
 setxkbmap -option "shift:both_capslock"
