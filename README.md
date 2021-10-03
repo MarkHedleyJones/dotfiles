@@ -137,7 +137,7 @@ Log out and log into i3:
 
 Install DCCUtil
 
-    sudo apt-get install dccutil
+    sudo apt-get install ddcutil
 
 If using Nvidia drivers and xorg, copy Xorg config across (this adds rules to fix i2c bus from Nvidia cards)
     
