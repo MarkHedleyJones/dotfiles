@@ -60,6 +60,14 @@ gnome-tweaks
 ```
 Appearance, Applications -> Adwaita-dark
 
+### Configure Audio
+
+    sudo vim /etc/pulse/default.pa
+
+Then comment out `load-module module-switch-on-port-available`
+
+    pulseaudio -k
+
 ## ROS
 ```
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
