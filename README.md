@@ -146,7 +146,7 @@ If using Nvidia drivers and xorg, copy Xorg config across (this adds rules to fi
 
 Allow current user to access i2c devices (replace 'mark' with your username)
 
-    echo bash -c '"KERNEL==\"i2c-[0-9]*\", OWNER=\"mark\", MODE=\"0660\"" > /etc/udev/rules.d/45-ddcutil-i2c.rules'
+    sudo bash -c 'echo "KERNEL==\"i2c-[0-9]*\", OWNER=\"mark\", MODE=\"0660\"" > /etc/udev/rules.d/45-ddcutil-i2c.rules'
 
 Restart
 
