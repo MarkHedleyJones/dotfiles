@@ -48,7 +48,9 @@ gnome-terminal
 
 * Right click -> Preferences.
 * Text, Custom font, Terminus (TTF) Medium size 12
-* Colours, Untick "Use colors from system theme", Tango Dark
+* Colours, Untick "Use colors from system theme"
+* Colours, Text and Background Colour, Built-in schemes: "Tango dark"
+* Colours, Palette, Built-in schemes: "Solarized"
 * General -> untick *Show menubar by default in new terminals*
 
 
