@@ -5,15 +5,15 @@
 	[
 		{
 			"characters": ".(){}[],'\"=<>/\\+-|&*%=$#@! ",
-			"selector": "source.python"
+			"selector": "source.python",
 		},
 		{
 			"characters": ":.(){}[],'\"=<>/\\+-|&*%=$#@! ",
-			"selector": "source & - source.python - constant.numeric"
+			"selector": "source & - source.python - constant.numeric",
 		},
 		{
 			"characters": " qazwsxedcrfvtgbyhnujmikolpQAZWSXEDCRFVTGBYHNUJMIKOLP",
-			"selector": "text"
+			"selector": "text",
 		}
 	],
 	"bold_folder_labels": true,
@@ -29,7 +29,7 @@
 	"hot_exit": "disabled",
 	"ignored_packages":
 	[
-		"Vintage"
+		"Vintage",
 	],
 	"indent_to_bracket": true,
 	"line_padding_bottom": 3,
@@ -44,5 +44,5 @@
 	"tab_size": 2,
 	"translate_tabs_to_spaces": true,
 	"trim_trailing_white_space_on_save": true,
-	"word_wrap": false
+	"word_wrap": false,
 }
