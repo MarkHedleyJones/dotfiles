@@ -21,8 +21,10 @@ alias s="cd ~/repos/seqsense"
 alias d='cd ~/repos/dotfiles'
 alias r='cd ~/repos'
 
-xset r rate 175 25
-setxkbmap -option "shift:both_capslock"
+# Moved to i3 config as keybord shortcuts
+# xset r rate 175 25
+# setxkbmap -option "shift:both_capslock"
+# setxkbmap -option "shift:both_capslock" -layout us -variant ,qwerty
 # xmodmap -e "clear Lock"
 
 LOCAL_BIN="${HOME}/.local/bin"
