@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <brightness_level 0-100>"
+    exit 1
+fi
+
+# 100% brightness, 75% contrast, 9300k
+# 75% brightness, 75% contrast, 7500k
+# 60% brightness, 50% contrast, 7500k
+# 20% brightness, 50% contrast, 6500k
+# 1% brightness, 30% contrast, 5000k
+
+brightness_level=$1
+
+if [ ${brightness_level} -le 1 ]; then
+    contrast=30
+    # 5000k
+    dell_colour_temp_code=0x04
+elif [ ${brightness_level} -le 20 ]; then
+    contrast=50
+    # 6500k
+    dell_colour_temp_code=0x0B
+elif [ ${brightness_level} -le 60 ]; then
+    contrast=50
+    # 6500k
+    dell_colour_temp_code=0x05
+elif [ ${brightness_level} -le 75 ]; then
+    contrast=70
+    # 7500k
+    dell_colour_temp_code=0x05
+else
+    contrast=75
+    # 9300k
+    dell_colour_temp_code=0x06
+fi
+
+# j = 9300k, 100% brightness, 75% contrast
+ddcutil --bus=5 setvcp 14 ${dell_colour_temp_code}
+ddcutil --bus=5 setvcp 10 ${brightness_level}
+ddcutil --bus=5 setvcp 12 ${contrast}
+echo "$(cat /sys/class/backlight/intel_backlight/max_brightness) * ${brightness_level} / 100.0" | bc -l | xargs printf "%.0f" > /sys/class/backlight/intel_backlight/brightness
