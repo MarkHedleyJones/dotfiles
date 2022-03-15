@@ -9,8 +9,8 @@ else
   exit 1
 fi
 
-cpp_files_to_check=($(find ${base_path} \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print))
-python_files_to_check=($(find ${base_path} \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.py' \) -print))
+cpp_files_to_check=($(find -L ${base_path} \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print))
+python_files_to_check=($(find -L ${base_path} \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.py' \) -print))
 
 echo "Running roslint (from ROS)"
 for file_path in ${cpp_files_to_check[*]}; do
