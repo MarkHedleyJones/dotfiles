@@ -49,8 +49,9 @@ bindsym XF86AudioRaiseVolume exec pactl set-sink-volume $(pactl list sinks short
 bindsym XF86AudioMute exec pactl set-sink-volume $(pactl list sinks short | grep RUNNING | cut -f 1) 0
 bindsym XF86AudioLowerVolume exec pactl set-sink-volume $(pactl list sinks short | grep RUNNING | cut -f 1) -2%
 bindsym $mod+Escape exec i3lock -i ~/.config/i3/artwork/suzy-lock.png && xset dpms force off
-bindsym $mod+Shift+q exec setxkbmap -option "shift:both_capslock" -layout us && xset r rate 175 25
-bindsym $mod+Shift+c exec setxkbmap -option "shift:both_capslock" -layout us -variant colemak && xset r rate 175 25
+
+bindsym $mod+z exec setxkbmap -option "shift:both_capslock" -layout us && xset r rate 175 25
+bindsym $mod+c exec setxkbmap -option "shift:both_capslock" -layout us -variant colemak && xset r rate 175 25
 # Monitor control
 
 # Opcodes
@@ -92,8 +93,8 @@ bindsym ctrl+shift+comma exec printf "$(date +%F)" | xclip -selection c
 bindsym ctrl+shift+m exec printf "$(date +%Y-W%V-%u)" | xclip -selection c
 bindsym ctrl+shift+b exec printf "$(date +%Y-W%V-%u) ($(date +%F))" | xclip -selection c
 
-bindsym Mod4+c exec --no-startup-id gnome-calculator
-bindsym Mod4+x exec --no-startup-id gnome-terminal -e 'sh -c "htop"' --class HTOP
+#bindsym $mod+c exec --no-startup-id gnome-calculator
+#bindsym Mod4+x exec --no-startup-id gnome-terminal -e 'sh -c "htop"' --class HTOP
 for_window [class="CALENDAR"] floating enable, resize grow left 0, resize grow right 0, resize grow up 170, resize grow down 170;
 for_window [class="HTOP"] floating enable, fullscreen enable;
 
@@ -247,7 +248,7 @@ exec --no-startup-id xsetroot -solid "#384A52"
 exec --no-startup-id nm-applet
 exec --no-startup-id gnome-keyring-daemon
 exec --no-startup-id /usr/libexec/gsd-xsettings
-exec --no-startup-id fcitx --replace
+#exec --no-startup-id fcitx --replace
 exec --no-startup-id xrdb ~/.Xresources
 exec --no-startup-id xset r rate 200 20
 exec --no-startup-id setxkbmap -option "shift:both_capslock"
