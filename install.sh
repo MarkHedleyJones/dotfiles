@@ -20,3 +20,5 @@ for filename in $(ls ${SCRIPT_DIR}/bin); do
         ln -s ${SCRIPT_DIR}/bin/${filename} ${LOCAL_BIN}/${filename}
     fi
 done
+
+ln -s ${SCRIPT_DIR}/.screenlayout ${HOME}/.screenlayout
