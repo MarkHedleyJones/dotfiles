@@ -4,8 +4,10 @@ alias aliases="vim ~/repos/dotfiles/bashrc_custom.sh"
 alias eb="vim ~/.bashrc"
 
 # alias cal="cal --iso --week -3"
-alias cal="ncal -w3Mb"
-
+alias mycal="ncal -w3Mb"
+alias mycal12="mycal -B6 -A6"
+alias mycal6="mycal -B3 -A3"
+alias mycal3="mycal"
 alias dir-dot="cd ~/repos/dotfiles"
 alias edit-dot="subl ~/repos/dotfiles --new-window"
 alias merge-dot="sublime_merge ~/repos/dotfiles --new-window"
