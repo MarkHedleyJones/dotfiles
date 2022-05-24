@@ -25,3 +25,10 @@ if [ ! -L ${HOME}/.screenlayout ]; then
     echo "Linking ~/.screenlayout to ${SCRIPT_DIR}/screenlayout"
     ln -s ${SCRIPT_DIR}/.screenlayout ${HOME}
 fi
+
+for filename in $(ls ${SCRIPT_DIR}/udev); do
+    if [ ! -L /etc/udev/rules.d/${filename} ]; then
+        echo "Linking ${filename} to /etc/udev/rules.d/${filename}"
+        sudo ln -s ${SCRIPT_DIR}/udev/${filename} /etc/udev/rules.d/${filename}
+    fi
+done
