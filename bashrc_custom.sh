@@ -13,7 +13,7 @@ alias edit-dot="subl ~/repos/dotfiles --new-window"
 alias merge-dot="sublime_merge ~/repos/dotfiles --new-window"
 
 alias arst="subl --new-window . && smerge --new-window ."
-alias cm="cd ~/catkin_ws ; catkin_make -j$(nproc); rospack profile ; source devel/setup.bash ; cd -"
+alias cm="cd ~/catkin_ws && catkin_make && rospack profile && source devel/setup.bash && cd -"
 alias cs="source ~/catkin_ws/devel/setup.bash"
 alias sm="smerge --new-window ."
 alias st="subl --new-window ."
@@ -22,7 +22,16 @@ alias c="cd ~/catkin_ws"
 alias s="cd ~/repos/seqsense"
 alias d='cd ~/repos/dotfiles'
 alias r='cd ~/repos'
+alias rl='c && cs && catkin_make roslint 2>&1 1>/dev/null | grep -v "make" | awk -F: '\''{ "basename " $1 | getline result} { print result ":" $2 $3 }'\'''
+alias rtplog='c && cs && catkin_make test_plog_detection && rostest --text sq_plog_lidar_detection plog_detection.test && cd -'
+alias rtphoto='c && cs && catkin_make test_take_target_photo && rostest --text  sq_take_target_photo take_target_photo.test && cd -'
+alias rtlidar='c && cs && catkin_make test_plog_detection && rostest --text  sq_plog_lidar_detection lidar_postprocessor.test && cd -'
+alias rtocc='c && cs && catkin_make test_occlusion_detection_server && rostest --text sq_take_target_photo occlusion_detection_server.test && cd -'
+alias rtoccs='c && cs && catkin_make test_occlusion_detection_server && rostest --reuse-master --text sq_take_target_photo occlusion_detection_server.test && cd -'
+alias rt='rtplog rtphoto'
+alias rlt='rl && rt'
 
+alias lt='l && t'
 # Moved to i3 config as keybord shortcuts
 # xset r rate 175 25
 # setxkbmap -option "shift:both_capslock"
