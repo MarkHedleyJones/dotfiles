@@ -84,19 +84,19 @@ bindsym $mod+F3 exec ~/.screenlayout/dual.sh
 # ; - Dark mode
 
 # j = 9300k, 100% brightness, 75% contrast
-bindsym $mod+ctrl+j exec ddcutil --bus=5 setvcp 14 0x06 && ddcutil --bus=5 setvcp 10 100 && ddcutil --bus=5 setvcp 12 75
+bindsym $mod+ctrl+j exec ddcutil --bus=5 setvcp 14 0x06 && ddcutil --bus=5 setvcp 10 100 && ddcutil --bus=5 setvcp 12 75 && cat /sys/class/backlight/intel_backlight/max_brightness > /sys/class/backlight/intel_backlight/brightness
 
 # l = 7500k, 75% brightness, 75% contrast
-bindsym $mod+ctrl+l exec ddcutil --bus=5 setvcp 14 0x05 && ddcutil --bus=5 setvcp 10 75 && ddcutil --bus=5 setvcp 12 70
+bindsym $mod+ctrl+l exec ddcutil --bus=5 setvcp 14 0x05 && ddcutil --bus=5 setvcp 10 75 && ddcutil --bus=5 setvcp 12 70 && echo "$(cat /sys/class/backlight/intel_backlight/max_brightness) * 0.75" | bc -l | xargs printf "%.0f" > /sys/class/backlight/intel_backlight/brightness
 
 # u = 7500k, 60% brightness, 50% contrast
-bindsym $mod+ctrl+u exec ddcutil --bus=5 setvcp 14 0x05 && ddcutil --bus=5 setvcp 10 60 && ddcutil --bus=5 setvcp 12 50
+bindsym $mod+ctrl+u exec ddcutil --bus=5 setvcp 14 0x05 && ddcutil --bus=5 setvcp 10 60 && ddcutil --bus=5 setvcp 12 50 && echo "$(cat /sys/class/backlight/intel_backlight/max_brightness) * 0.60" | bc -l | xargs printf "%.0f" > /sys/class/backlight/intel_backlight/brightness
 
 # y = 6500k, 20% brightness, 50% contrast
-bindsym $mod+ctrl+y exec ddcutil --bus=5 setvcp 14 0x0B && ddcutil --bus=5 setvcp 10 20 && ddcutil --bus=5 setvcp 12 50
+bindsym $mod+ctrl+y exec ddcutil --bus=5 setvcp 14 0x0B && ddcutil --bus=5 setvcp 10 20 && ddcutil --bus=5 setvcp 12 50 && echo "$(cat /sys/class/backlight/intel_backlight/max_brightness) * 0.20" | bc -l | xargs printf "%.0f" > /sys/class/backlight/intel_backlight/brightness
 
 # ; = 5000k, 1% brightness, 30% contrast
-bindsym $mod+ctrl+semicolon exec ddcutil --bus=5 setvcp 14 0x04 && ddcutil --bus=5 setvcp 10 1 && ddcutil --bus=5 setvcp 12 30
+bindsym $mod+ctrl+semicolon exec ddcutil --bus=5 setvcp 14 0x04 && ddcutil --bus=5 setvcp 10 1 && ddcutil --bus=5 setvcp 12 30 && echo "$(cat /sys/class/backlight/intel_backlight/max_brightness) * 0.01" | bc -l | xargs printf "%.0f" > /sys/class/backlight/intel_backlight/brightness
 
 bindsym ctrl+shift+comma exec printf "$(date +%F)" | xclip -selection c
 bindsym ctrl+shift+m exec printf "$(date +%Y-W%V-%u)" | xclip -selection c
