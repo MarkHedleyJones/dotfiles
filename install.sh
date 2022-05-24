@@ -20,3 +20,8 @@ for filename in $(ls ${SCRIPT_DIR}/bin); do
         ln -s ${SCRIPT_DIR}/bin/${filename} ${LOCAL_BIN}/${filename}
     fi
 done
+
+if [ ! -L ${HOME}/.screenlayout ]; then
+    echo "Linking ~/.screenlayout to ${SCRIPT_DIR}/screenlayout"
+    ln -s ${SCRIPT_DIR}/.screenlayout ${HOME}
+fi
