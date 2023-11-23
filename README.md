@@ -1,10 +1,10 @@
 
 # dotfiles
 
-This guide is intended to be run on Ubuntu 18.04.
+This guide is intended to be run on Ubuntu 22.04.
 I use this guide to keep a consistent system configuration between machines and reduce setup-time on fresh installs.
 
-Please note: I use a Colmak keyboard layout and my i3 configuration is adjusted to suit this. 
+Please note: I use a Colmak keyboard layout and my i3 configuration is adjusted to suit this.
 
 ### SSH Keys
 Fist, copy contents of SSH keys into `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`
@@ -13,104 +13,34 @@ Then set permissions with:
 chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 ```
 
-## Window Manager (i3 & gnome-shell)
-This will install a vanilla gnome environment, i3-gaps, dmenu-extended and the configuration files from this repo.
-```
-sudo add-apt-repository ppa:kgilmer/speed-ricer
-sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git feh arandr python-is-python3 vim python3-pip fonts-terminus curl
-mkdir ~/repos && cd ~/repos
-git clone git@github.com:MarkHedleyJones/dotfiles.git
-git clone git@github.com:MarkHedleyJones/dmenu-extended.git
-cd dmenu-extended
-sudo python setup.py install
-ln -s ~/repos/dotfiles/i3 ~/.config
-ln -s ~/repos/dotfiles/.Xresources ~/.Xresources
-```
-Enable bitmap fonts
-```
-sudo rm /etc/fonts/conf.d/70-no-bitmaps.conf
-sudo ln -s ../conf.avail/70-force-bitmaps.conf /etc/fonts/conf.d/
-sudo dpkg-reconfigure fontconfig-config
-sudo dpkg-reconfigure fontconfig
-```
-Install dotfiles
-```
-~/repos/dotfiles/install.sh
-```
-You should be able to log-out and log-in to an i3 session now.
-
-
-### Configure gnome-terminal
+## i3 Window Manager
+This will install a vanilla gnome environment, i3 (with gaps), dmenu-extended and the configuration files from this repo.
+1. Follow instructions to setup Stable Releases repo and install i3 at: https://i3wm.org/docs/repositories.html
+2. Install some basic packages `sudo apt-get update && sudo apt-get install polybar git vim python3-pip arandr feh curl xfonts-terminus`
+3. Install dmenu-extended `sudo pip install dmenu-extended` (maybe don't use sudo as it complains)
+4. Link configuration files into place by running `install.sh`
+5. Log out and log into an i3 session
+6. Open a terminal (Meta + Enter), right-click, preferences, check "Custom font" and select Terminus (size 12)
+7. Install extra packages
 
 ```
-gnome-terminal
-```
-
-* Right click -> Preferences.
-* Text, Custom font, Terminus (TTF) Medium size 12
-* Colours, Untick "Use colors from system theme"
-* Colours, Text and Background Colour, Built-in schemes: "Tango dark"
-* Colours, Palette, Built-in schemes: "Solarized"
-* General -> untick *Show menubar by default in new terminals*
+sudo apt-get install \
+  gimp \
+  inkscape \
+  blender \
+  docker.io \
+  docker-buildx
 
 
-### Configure GTK-3
-```
-gnome-tweaks
-```
-Appearance, Applications -> Adwaita-dark
-
-## ROS
-```
-sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
-sudo apt-get update && sudo apt-get install -y ros-noetic-desktop-full python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
-sudo rosdep init
-rosdep update
-echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+sudo usermod -a -G docker $USER
 ```
 
-## Sublime Text
-```
-sudo apt-get install -y apt-transport-https
-wget -qO - https://download.sublimetext.com/sublimehq-pub.gpg | sudo apt-key add -
-echo "deb https://download.sublimetext.com/ apt/stable/" | sudo tee /etc/apt/sources.list.d/sublime-text.list
-sudo apt-get update && sudo apt-get install -y sublime-text sublime-merge clang clang-format
-subl
-```
-Install Package Control then
-* Clang Format
-* EasyClangComplete
-* Bracket Highlighter
-* JSON Reindent
-* Markdown Preview
-* PyYapf - Python Formatter
-* python-black
-* LiveReload
-* Jedi - Python autocompletion
-```
-ln -fs ~/repos/dotfiles/Preferences.sublime-settings ~/.config/sublime-text/Packages/User
-ln -fs ~/repos/dotfiles/snippet_cout.sublime-snippet ~/.config/sublime-text/Packages/User
-cd ~/repos
-git clone git@github.com:seqsense/ros_style.git
-ln -s ~/repos/ros_style/.clang-format ~/
-sudo pip install yapf
-mkdir -p ~/.config/yapf
-ln -s ~/repos/ros_style/.style.yapf ~/.config/yapf
+## Visual Studio Code
+1. Visit https://code.visualstudio.com/download
+2. Download .deb
+3. Open terminal and execute `sudo dpkg -i ~/Downloads/code_*_amd64.deb`
 
 ```
-
-## Others
-```
-sudo apt-get install -y gimp inkscape xclip
-sudo apt-get remove -y apport
-```
-Automaticaly call the custom bashrc script on bash start
-
-    echo "eval \"\$(cat ~/repos/dotfiles/bashrc_custom.sh)\"" >> ~/.bashrc
-
-Alternatively, you can set double-shift as capslock by editing:
-`/etc/default/keyboard` and setting `XKBOPTIONS="shift:both_capslock"`
 
 ### Japanese Language Support
 While in Gnome or Unity launch *Language Support*.
@@ -137,12 +67,13 @@ Log out and log into i3:
 
 ### DCC Monitor Control
 
+DANGER: THIS WILL BREAK YOUR SYSTEM AND STOP YOU FROM BOOTING!
 Install DCCUtil
 
     sudo apt-get install ddcutil
 
 If using Nvidia drivers and xorg, copy Xorg config across (this adds rules to fix i2c bus from Nvidia cards)
-    
+
     sudo mkdir -p /etc/X11/xorg.conf.d
     sudo cp /usr/share/ddcutil/data/90-nvidia-i2c.conf /etc/X11/xorg.conf.d/
 
@@ -153,9 +84,6 @@ Allow current user to access i2c devices (replace 'mark' with your username)
 Restart
 
 
-
-
-
 ## Dev tools
 ### General
 ```
@@ -163,14 +91,3 @@ sudo apt-get install -y libpcl-dev pcl-tools libopencv-dev cmake vim-gtk3 clang-
 git config --global user.name "Mark Hedley Jones"
 git config --global user.email "markhedleyjones@gmail.com"
 ```
-
-
-### Docker
-```
-sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-sudo apt update && sudo apt-get install -y docker-ce
-sudo usermod -aG docker $USER
-```
-Restart your computer to enable non-root execution of Docker
