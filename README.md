@@ -28,19 +28,36 @@ sudo apt-get install \
   gimp \
   inkscape \
   blender \
-  docker.io \
-  docker-buildx
-
+  blueman \
+  pavucontrol
 
 sudo usermod -a -G docker $USER
 ```
 
-## Visual Studio Code
+## Development software
+
+### Base packages
+```
+sudo apt-get install \
+  cmake \
+  libpcl-dev \
+  libyaml-cpp-dev \
+  clang-format \
+  libgtest-dev
+
+### Visual Studio Code
 1. Visit https://code.visualstudio.com/download
 2. Download .deb
 3. Open terminal and execute `sudo dpkg -i ~/Downloads/code_*_amd64.deb`
 
-```
+### Docker
+Follow instructions at:
+https://docs.docker.com/engine/install/ubuntu/
+
+#### Nvidia Container Toolkit
+Follow instructions at:
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-apt
+
 
 ### Japanese Language Support
 While in Gnome or Unity launch *Language Support*.
