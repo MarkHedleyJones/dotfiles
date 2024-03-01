@@ -45,6 +45,7 @@ bindsym XF86WWW exec firefox
 bindsym $mod+Ctrl+Return exec firefox
 bindsym XF86HomePage exec firefox
 bindsym XF86Explorer exec nautilus
+bindsym $mod+shift+Return exec nautilus
 bindsym Shift+XF86Explorer exec sudo pm-suspend-hybrid
 bindsym XF86AudioRaiseVolume exec pactl set-sink-volume $(pactl list sinks short | grep RUNNING | cut -f 1) +2%
 bindsym XF86AudioMute exec pactl set-sink-volume $(pactl list sinks short | grep RUNNING | cut -f 1) 0
