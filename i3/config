@@ -40,6 +40,7 @@ bindsym $mod+s exec dmenu_extended_run
 
 
 for_window [class="rviz"] floating enable
+for_window [class="rqt"] floating enable
 
 bindsym XF86WWW exec firefox
 bindsym XF86HomePage exec firefox
