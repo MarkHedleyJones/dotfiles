@@ -253,7 +253,6 @@ exec --no-startup-id nm-applet
 exec --no-startup-id gnome-keyring-daemon --start --components=ssh,secrets,pkcs11
 exec --no-startup-id ibus-daemon
 exec --no-startup-id /usr/libexec/gsd-xsettings
-#exec --no-startup-id fcitx --replace
 exec --no-startup-id xrdb ~/.Xresources
 exec --no-startup-id xset r rate 200 20
 exec --no-startup-id setxkbmap -option "shift:both_capslock"
