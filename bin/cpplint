@@ -1,11 +1,3 @@
-#!/usr/bin/env python
+#!/usr/bin/env bash
 
-import sys
-
-from roslint import cpplint_wrapper
-
-# Adding default flags to cpplint.
-# You can override them using global CMAKE variable ROSLINT_CPP_OPTS.
-# The index of injected argument is 1 because 0 is program's name
-sys.argv.insert(1, "--filter=-runtime/references,-build/c++11")
-cpplint_wrapper.main()
+roslint-cpplint $1 1>/dev/null
