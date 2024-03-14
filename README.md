@@ -29,7 +29,8 @@ sudo apt-get install \
   inkscape \
   blender \
   blueman \
-  pavucontrol
+  pavucontrol \
+  xclip
 
 sudo usermod -a -G docker $USER
 ```
@@ -39,11 +40,19 @@ sudo usermod -a -G docker $USER
 ### Base packages
 ```
 sudo apt-get install \
+  clang-format \
   cmake \
+  libgtest-dev \
   libpcl-dev \
   libyaml-cpp-dev \
-  clang-format \
-  libgtest-dev
+  libopencv-dev \
+  nomacs
+
+sudo pip3 install --upgrade git+https://github.com/at-wat/roslint-pip
+
+### Node
+Follow these instructions to get the latest version of node:
+https://github.com/nodesource/distributions#installation-instructions
 
 ### Visual Studio Code
 1. Visit https://code.visualstudio.com/download
