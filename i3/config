@@ -42,7 +42,6 @@ bindsym $mod+s exec dmenu_extended_run
 for_window [class="rviz"] floating enable
 
 bindsym XF86WWW exec firefox
-bindsym $mod+Ctrl+Return exec firefox
 bindsym XF86HomePage exec firefox
 bindsym $mod+shift+Return exec firefox
 bindsym $mod+Ctrl+Return exec nautilus --new-window
