@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 
-alias aliases="vim ~/repos/dotfiles/bashrc_custom.sh"
+# Edit aliases
+alias ea="vim ~/repos/dotfiles/bashrc_custom.sh"
+# Edit bashrc
 alias eb="vim ~/.bashrc"
+# Edit i3 config
+alias ei="vim ~/repos/dotfiles/i3/config"
 
-# alias cal="cal --iso --week -3"
 alias mycal="ncal -w3Mb"
 alias mycal12="mycal -B6 -A6"
 alias mycal6="mycal -B3 -A3"
 alias mycal3="mycal"
-alias dir-dot="cd ~/repos/dotfiles"
-alias edit-dot="subl ~/repos/dotfiles --new-window"
-alias merge-dot="sublime_merge ~/repos/dotfiles --new-window"
 
 alias arst="subl --new-window . && smerge --new-window ."
 alias cm="cd ~/catkin_ws && catkin_make && rospack profile && source devel/setup.bash && cd -"
@@ -19,7 +19,8 @@ alias sm="smerge --new-window ."
 alias st="subl --new-window ."
 
 alias c="cd ~/catkin_ws"
-alias s="cd ~/repos/seqsense"
+alias s="cd ~/repos/sq-slammer"
+alias pv="pcl_viewer"
 alias d='cd ~/repos/dotfiles'
 alias r='cd ~/repos'
 alias rl='c && cs && catkin_make roslint 2>&1 1>/dev/null | grep -v "make" | awk -F: '\''{ "basename " $1 | getline result} { print result ":" $2 $3 }'\'''
