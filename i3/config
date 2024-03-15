@@ -42,6 +42,7 @@ bindsym $mod+s exec dmenu_extended_run
 for_window [class="rviz"] floating enable
 
 bindsym XF86WWW exec firefox
+bindsym $mod+Ctrl+Return exec firefox
 bindsym XF86HomePage exec firefox
 bindsym XF86Explorer exec nautilus
 bindsym Shift+XF86Explorer exec sudo pm-suspend-hybrid
