@@ -112,12 +112,14 @@ Allow current user to access i2c devices (replace 'mark' with your username)
 
 Restart
 
-
-
-
-
 ## Tools
+```
+Setup git
+git config --global user.name "Mark Hedley Jones"
+git config --global user.email "markhedleyjones@gmail.com"
+```
 ### Devleopment
+Install development tools
 ```
 sudo apt-get install -y \
     libpcl-dev \
@@ -125,9 +127,6 @@ sudo apt-get install -y \
     libopencv-dev \
     cmake \
     clang-format
-
-git config --global user.name "Mark Hedley Jones"
-git config --global user.email "markhedleyjones@gmail.com"
 ```
 
 
@@ -141,3 +140,7 @@ sudo apt install docker-ce docker-ce-cli containerd.io
 sudo usermod -aG docker $USER
 ```
 Restart your system
+
+#### NVIDIA Container Toolkit
+Then follow the instructions on
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-apt
