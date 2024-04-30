@@ -4,7 +4,7 @@
 This guide is intended to be run on Ubuntu 18.04.
 I use this guide to keep a consistent system configuration between machines and reduce setup-time on fresh installs.
 
-Please note: I use a Colmak keyboard layout and my i3 configuration is adjusted to suit this. 
+Please note: I use a Colmak keyboard layout and my i3 configuration is adjusted to suit this.
 
 ### SSH Keys
 Fist, copy contents of SSH keys into `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`
@@ -13,11 +13,30 @@ Then set permissions with:
 chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 ```
 
+## Vanilla Gnome
+```
+sudo apt-get remove pipewire-alsa
+sudo apt-get install vanilla-gnome-desktop gnome-shell gnome-session gnome-tweaks
+```
+
+## Terminus Font (optional)
+```
+sudo apt-get install -y xfonts-terminus
+```
+Visit https://files.ax86.net/terminus-ttf/#download and download the Terminus TTF for Java or non-Windows® applications archive.
+Extract and install each of the font packages.
+
+### Configure gnome-terminal
+
+* Right click -> Preferences.
+* Text, Custom font, "Terminus" size 12
+* Colors, Palette, GNOME
+
 ## Window Manager (i3 & gnome-shell)
-This will install a vanilla gnome environment, i3-gaps, dmenu-extended and the configuration files from this repo.
+This will install a i3-gaps, dmenu-extended and the configuration files from this repo.
 ```
 sudo add-apt-repository ppa:kgilmer/speed-ricer
-sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git feh arandr python-is-python3 vim python3-pip fonts-terminus curl
+sudo apt-get update && sudo apt-get install -y gnome-session i3-gaps polybar xfonts-terminus* gnome-tweak-tool git feh arandr neovim python3-pip fonts-terminus curl
 mkdir ~/repos && cd ~/repos
 git clone git@github.com:MarkHedleyJones/dotfiles.git
 git clone git@github.com:MarkHedleyJones/dmenu-extended.git
@@ -39,26 +58,6 @@ Install dotfiles
 ```
 You should be able to log-out and log-in to an i3 session now.
 
-
-### Configure gnome-terminal
-
-```
-gnome-terminal
-```
-
-* Right click -> Preferences.
-* Text, Custom font, Terminus (TTF) Medium size 12
-* Colours, Untick "Use colors from system theme"
-* Colours, Text and Background Colour, Built-in schemes: "Tango dark"
-* Colours, Palette, Built-in schemes: "Solarized"
-* General -> untick *Show menubar by default in new terminals*
-
-
-### Configure GTK-3
-```
-gnome-tweaks
-```
-Appearance, Applications -> Adwaita-dark
 
 ## ROS
 ```
@@ -142,7 +141,7 @@ Install DCCUtil
     sudo apt-get install ddcutil
 
 If using Nvidia drivers and xorg, copy Xorg config across (this adds rules to fix i2c bus from Nvidia cards)
-    
+
     sudo mkdir -p /etc/X11/xorg.conf.d
     sudo cp /usr/share/ddcutil/data/90-nvidia-i2c.conf /etc/X11/xorg.conf.d/
 
@@ -156,10 +155,16 @@ Restart
 
 
 
-## Dev tools
-### General
+## Tools
+### Devleopment
 ```
-sudo apt-get install -y libpcl-dev pcl-tools libopencv-dev cmake vim-gtk3 clang-format
+sudo apt-get install -y \
+    libpcl-dev \
+    pcl-tools \
+    libopencv-dev \
+    cmake \
+    clang-format
+
 git config --global user.name "Mark Hedley Jones"
 git config --global user.email "markhedleyjones@gmail.com"
 ```
@@ -168,9 +173,10 @@ git config --global user.email "markhedleyjones@gmail.com"
 ### Docker
 ```
 sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-sudo apt update && sudo apt-get install -y docker-ce
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io
 sudo usermod -aG docker $USER
 ```
-Restart your computer to enable non-root execution of Docker
+Restart your system
