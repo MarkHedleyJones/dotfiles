@@ -15,7 +15,7 @@ chmod 644 ~/.ssh/id_rsa.pub && chmod 600 ~/.ssh/id_rsa
 
 ## Vanilla Gnome
 ```
-sudo apt-get remove pipewire-alsa
+sudo apt-get remove pipewire-alsa apport*
 sudo apt-get install vanilla-gnome-desktop gnome-shell gnome-session gnome-tweaks
 ```
 
@@ -32,6 +32,7 @@ Extract and install each of the font packages.
 * Text, Custom font, "Terminus" size 12
 * Colors, Palette, GNOME
 
+
 ## Window Manager (i3 & gnome-shell)
 This will install a i3-gaps, dmenu-extended and the configuration files from this repo.
 ```
@@ -45,93 +46,53 @@ sudo python setup.py install
 ln -s ~/repos/dotfiles/i3 ~/.config
 ln -s ~/repos/dotfiles/.Xresources ~/.Xresources
 ```
-Enable bitmap fonts
-```
-sudo rm /etc/fonts/conf.d/70-no-bitmaps.conf
-sudo ln -s ../conf.avail/70-force-bitmaps.conf /etc/fonts/conf.d/
-sudo dpkg-reconfigure fontconfig-config
-sudo dpkg-reconfigure fontconfig
-```
 Install dotfiles
 ```
 ~/repos/dotfiles/install.sh
 ```
 You should be able to log-out and log-in to an i3 session now.
 
+## Third Party Software
+Using the software installer "Apps" install:
+* 0ad
+* Gimp
+* Inkscape
+* Sublime Merge
+* Sublime Text
+* blender
+* code
+* firmware-updater
+* termdown
 
-## ROS
+Terminal:
 ```
-sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
-sudo apt-get update && sudo apt-get install -y ros-noetic-desktop-full python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
-sudo rosdep init
-rosdep update
-echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
-```
-
-## Sublime Text
-```
-sudo apt-get install -y apt-transport-https
-wget -qO - https://download.sublimetext.com/sublimehq-pub.gpg | sudo apt-key add -
-echo "deb https://download.sublimetext.com/ apt/stable/" | sudo tee /etc/apt/sources.list.d/sublime-text.list
-sudo apt-get update && sudo apt-get install -y sublime-text sublime-merge clang clang-format
-subl
-```
-Install Package Control then
-* Clang Format
-* EasyClangComplete
-* Bracket Highlighter
-* JSON Reindent
-* Markdown Preview
-* PyYapf - Python Formatter
-* python-black
-* LiveReload
-* Jedi - Python autocompletion
-```
-ln -fs ~/repos/dotfiles/Preferences.sublime-settings ~/.config/sublime-text/Packages/User
-ln -fs ~/repos/dotfiles/snippet_cout.sublime-snippet ~/.config/sublime-text/Packages/User
-cd ~/repos
-git clone git@github.com:seqsense/ros_style.git
-ln -s ~/repos/ros_style/.clang-format ~/
-sudo pip install yapf
-mkdir -p ~/.config/yapf
-ln -s ~/repos/ros_style/.style.yapf ~/.config/yapf
-
+sudo apt-get install \
+    xclip \
 ```
 
-## Others
-```
-sudo apt-get install -y gimp inkscape xclip
-sudo apt-get remove -y apport
-```
+## Keyboard Settings
+
+### Repeat rate and delay configuration (GNOME)
+Open Accessibility under system settings, Typing, Repeat Keys.
+Slow the speed down by focusing on the speed slider and pressing the left arrow key 20 times.
+Set the delay by moving the slider all the way to the left and pressing right 15 times.
+
+### Repeat rate and delay (i3)
 Automaticaly call the custom bashrc script on bash start
+```
+echo "eval \"\$(cat ~/repos/dotfiles/bashrc_custom.sh)\"" >> ~/.bashrc
+```
 
-    echo "eval \"\$(cat ~/repos/dotfiles/bashrc_custom.sh)\"" >> ~/.bashrc
-
-Alternatively, you can set double-shift as capslock by editing:
+### Both Shifts as Capslock
+```
+Set double-shift as capslock by editing:
 `/etc/default/keyboard` and setting `XKBOPTIONS="shift:both_capslock"`
+```
 
 ### Japanese Language Support
-While in Gnome or Unity launch *Language Support*.
+While in Gnome Search ang run *Language Support*.
 If "The language support is not installed correctly" click Install.
-Otherwise, click *Install / Remove Languages* and enable Japanese
-
-```
-sudo apt-get install fcitx-mozc
-```
-* Run "Input Method"
-* Hit OK
-* Select "Yes" to update the settings
-* Select fcitx and select OK.
-* Confirm the settings by cliking OK.
-
-Log out and log into i3:
-* Right-click Keyboard icon in system tray and click "Configure"
-* Global Config
-* Trigger Input Method set to "Super+Space"
-* Change *Share State Among Window* to *All*
-* *Input Method* -> Click *+* to add new input mode
-* Untick *Only Show Current Language*, add *Mozc*
+Click *Install / Remove Languages* and enable Japanese.
 
 
 ### DCC Monitor Control
