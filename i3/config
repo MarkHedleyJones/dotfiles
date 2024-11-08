@@ -61,6 +61,8 @@ bindsym $mod+F1 exec ~/.screenlayout/laptop.sh
 bindsym $mod+F2 exec ~/.screenlayout/external.sh
 bindsym $mod+F3 exec ~/.screenlayout/dual.sh
 
+bindsym $mod+x exec gnome-screenshot --interactive
+
 # Monitor control
 
 # Opcodes
