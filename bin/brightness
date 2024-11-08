@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+# Take a single argument which is the brightness level
+# e.g. ./brightness
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 [+-]<brightness>"
+    echo ""
+    echo "Examples:"
+    echo "set the brightness of the monitor to 50%"
+    echo "$0 50"
+    echo "Increase the brigthnesss of the monitor by 10%"
+    echo "$0 +10"
+    echo "Decrease the brigthnesss of the monitor by 10%"
+    echo "$0 -10"
+    exit 1
+fi
+
+brightness_file=${HOME}/.brightness
+if [ ! -f $brightness_file ]; then
+    echo "50" > $brightness_file
+fi
+current_brightness=$(cat $brightness_file)
+bus_number=14
+
+if [[ $1 == +* ]]; then
+    current_brightness=$((current_brightness + ${1#+}))
+elif [[ $1 == -* ]]; then
+    current_brightness=$((current_brightness - ${1#-}))
+else
+    current_brightness=$1
+fi
+
+if [ $current_brightness -lt 0 ]; then
+    current_brightness=0
+elif [ $current_brightness -gt 100 ]; then
+    current_brightness=100
+fi
+
+ddcutil --bus=14 setvcp 10 ${current_brightness}
+
+contrast=$((${current_brightness} * 35 / 100 + 40))
+if [[ $contrast -lt 30 ]]; then
+    contrast=30
+elif [[ $contrast -gt 100 ]]; then
+    contrast=100
+fi
+ddcutil --bus=14 setvcp 12 ${contrast}
+
+if [ ${current_brightness} -eq 100 ]; then
+    # 9300k
+    ddcutil --bus=14 setvcp 14 0x06
+elif [ ${current_brightness} -ge 60 ]; then
+    # 7500k
+    ddcutil --bus=14 setvcp 14 0x05
+elif [ ${current_brightness} -ge 20 ]; then
+    # 6500k
+    ddcutil --bus=14 setvcp 14 0x0B
+else
+    # 5000k
+    ddcutil --bus=14 setvcp 14 0x04
+fi
+
+echo "${current_brightness}" > ${brightness_file}
+
+# Path to the brightness control file (adjust if necessary)
+path_brightness="/sys/class/backlight/intel_backlight/brightness"
+path_brightness_max="/sys/class/backlight/intel_backlight/max_brightness"
+
+# Get the maximum brightness level
+brightness_max=$(cat "$path_brightness_max")
+echo $brightness_max
+# Calculate the brightness value
+# intel_brightness=$((brightness_max * current_brightness / 100))
+intel_brightness=$((brightness_max * (current_brightness * current_brightness) / 10000))
+
+# Set the brightness
+echo "$intel_brightness" | tee "$path_brightness"
