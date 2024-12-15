@@ -37,7 +37,19 @@ elif [ $current_brightness -gt 100 ]; then
     current_brightness=100
 fi
 
-ddcutil --bus=14 setvcp 10 ${current_brightness}
+# If you can't find the bus number, run ddcutil detect
+ddcutil --bus=${bus_number} setvcp 10 ${current_brightness}
+
+if [ $? -ne 0 ]; then
+    echo "Failed to set the brightness - you may need to update the bus number"
+    echo "To find the bus number, run:"
+    echo "  ddutil detect"
+    echo "Then update the line:"
+    echo "  bus_number=${bus_number}"
+    echo "by editing the file:"
+    echo "  vim $0"
+    exit 1
+fi
 
 contrast=$((${current_brightness} * 35 / 100 + 40))
 if [[ $contrast -lt 30 ]]; then
@@ -45,20 +57,20 @@ if [[ $contrast -lt 30 ]]; then
 elif [[ $contrast -gt 100 ]]; then
     contrast=100
 fi
-ddcutil --bus=14 setvcp 12 ${contrast}
+ddcutil --bus=${bus_number} setvcp 12 ${contrast}
 
 if [ ${current_brightness} -eq 100 ]; then
     # 9300k
-    ddcutil --bus=14 setvcp 14 0x06
+    ddcutil --bus=${bus_number} setvcp 14 0x06
 elif [ ${current_brightness} -ge 60 ]; then
     # 7500k
-    ddcutil --bus=14 setvcp 14 0x05
+    ddcutil --bus=${bus_number} setvcp 14 0x05
 elif [ ${current_brightness} -ge 20 ]; then
     # 6500k
-    ddcutil --bus=14 setvcp 14 0x0B
+    ddcutil --bus=${bus_number} setvcp 14 0x0B
 else
     # 5000k
-    ddcutil --bus=14 setvcp 14 0x04
+    ddcutil --bus=${bus_number} setvcp 14 0x04
 fi
 
 echo "${current_brightness}" > ${brightness_file}
