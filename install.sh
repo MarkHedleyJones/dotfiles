@@ -2,6 +2,7 @@
 
 SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd )"
 LOCAL_BIN="${HOME}/.local/bin"
+PERSONAL_ALIASES="${HOME}/.aliases"
 
 if [ ! -L ${HOME}/.config/i3 ]; then
     echo "Linking ~/.config/i3 to ${SCRIPT_DIR}/i3"
@@ -24,4 +25,12 @@ done
 if [ ! -L ${HOME}/.screenlayout ]; then
     echo "Linking ~/.screenlayout to ${SCRIPT_DIR}/screenlayout"
     ln -s ${SCRIPT_DIR}/.screenlayout ${HOME}
+fi
+
+# Set up personal aliases file if it doesn't exist
+if [ ! -f "${PERSONAL_ALIASES}" ]; then
+    echo "Creating personal aliases file from template..."
+    cp "${SCRIPT_DIR}/.aliases.example" "${PERSONAL_ALIASES}"
+    echo "Created ${PERSONAL_ALIASES} - customize this file with your personal aliases"
+    echo "This file will not be tracked by git"
 fi

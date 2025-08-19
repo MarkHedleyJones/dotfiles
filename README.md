@@ -112,6 +112,31 @@ Allow current user to access i2c devices (replace 'mark' with your username)
 
 Restart
 
+## Aliases Management
+
+Personal aliases are stored in `~/.aliases` (not tracked in git). To sync them across machines:
+
+1. Install GitHub CLI and authenticate:
+```bash
+sudo apt install gh
+gh auth login
+```
+
+2. Push your aliases to a private gist:
+```bash
+aliases-push
+```
+
+3. On another machine, pull them down:
+```bash
+aliases-pull
+```
+
+4. Compare local vs remote:
+```bash
+aliases-diff
+```
+
 ## Tools
 ```
 Setup git

@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+# Pull aliases from GitHub Gist to local
+# Requires: gh CLI tool and authentication
+
+ALIASES_FILE="${HOME}/.aliases"
+GIST_DESCRIPTION="Personal shell aliases (private)"
+BACKUP_DIR="${HOME}/.aliases-backups"
+
+# Check if gh is installed
+if ! command -v gh &> /dev/null; then
+    echo "Error: GitHub CLI (gh) is not installed"
+    echo "Install it with: sudo apt install gh"
+    echo "Then authenticate with: gh auth login"
+    exit 1
+fi
+
+# Check if user is authenticated
+if ! gh auth status &>/dev/null; then
+    echo "Error: Not authenticated with GitHub"
+    echo "Run: gh auth login"
+    exit 1
+fi
+
+# Find the gist
+GIST_ID=$(gh gist list --limit 100 | grep "${GIST_DESCRIPTION}" | awk '{print $1}' | head -1)
+
+if [ -z "${GIST_ID}" ]; then
+    echo "Error: No aliases gist found with description: ${GIST_DESCRIPTION}"
+    echo "Have you run 'aliases-push' on another machine first?"
+    exit 1
+fi
+
+# Backup existing aliases if they exist
+if [ -f "${ALIASES_FILE}" ]; then
+    mkdir -p "${BACKUP_DIR}"
+    BACKUP_FILE="${BACKUP_DIR}/aliases-$(date +%Y%m%d-%H%M%S)"
+    cp "${ALIASES_FILE}" "${BACKUP_FILE}"
+    echo "Backed up existing aliases to: ${BACKUP_FILE}"
+fi
+
+# Download the gist
+echo "Downloading aliases from gist (${GIST_ID})..."
+gh gist view "${GIST_ID}" --raw > "${ALIASES_FILE}"
+
+if [ $? -eq 0 ]; then
+    echo "Successfully pulled aliases to ${ALIASES_FILE}"
+    echo ""
+    echo "To apply changes, either:"
+    echo "  1. Open a new terminal, or"
+    echo "  2. Run: source ${ALIASES_FILE}"
+else
+    echo "Error downloading gist"
+    # Restore backup if download failed
+    if [ -f "${BACKUP_FILE}" ]; then
+        cp "${BACKUP_FILE}" "${ALIASES_FILE}"
+        echo "Restored backup due to download failure"
+    fi
+    exit 1
+fi

@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+# Compare local aliases with GitHub Gist version
+# Requires: gh CLI tool and authentication
+
+ALIASES_FILE="${HOME}/.aliases"
+GIST_DESCRIPTION="Personal shell aliases (private)"
+TEMP_FILE="/tmp/aliases-gist-$$"
+
+# Check if gh is installed
+if ! command -v gh &> /dev/null; then
+    echo "Error: GitHub CLI (gh) is not installed"
+    echo "Install it with: sudo apt install gh"
+    echo "Then authenticate with: gh auth login"
+    exit 1
+fi
+
+# Check if user is authenticated
+if ! gh auth status &>/dev/null; then
+    echo "Error: Not authenticated with GitHub"
+    echo "Run: gh auth login"
+    exit 1
+fi
+
+# Check if local aliases exist
+if [ ! -f "${ALIASES_FILE}" ]; then
+    echo "Warning: No local aliases file at ${ALIASES_FILE}"
+    echo "Creating empty file for comparison..."
+    touch "${ALIASES_FILE}"
+fi
+
+# Find the gist
+GIST_ID=$(gh gist list --limit 100 | grep "${GIST_DESCRIPTION}" | awk '{print $1}' | head -1)
+
+if [ -z "${GIST_ID}" ]; then
+    echo "No gist found. Local aliases are:"
+    echo "---"
+    cat "${ALIASES_FILE}"
+    echo "---"
+    echo ""
+    echo "Run 'aliases-push' to create a gist"
+    exit 0
+fi
+
+# Download gist to temp file
+gh gist view "${GIST_ID}" --raw > "${TEMP_FILE}"
+
+# Show diff
+echo "Comparing local aliases with gist (${GIST_ID})..."
+echo "< = local only, > = gist only"
+echo "================================"
+
+if diff -u "${ALIASES_FILE}" "${TEMP_FILE}"; then
+    echo "Files are identical!"
+else
+    echo ""
+    echo "================================"
+    echo "To push local changes: aliases-push"
+    echo "To pull gist changes:  aliases-pull"
+fi
+
+# Cleanup
+rm -f "${TEMP_FILE}"
