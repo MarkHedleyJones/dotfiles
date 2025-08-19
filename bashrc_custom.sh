@@ -39,6 +39,8 @@ alias rtoccs='c && cs && catkin_make test_occlusion_detection_server && rostest 
 alias rt='rtplog rtphoto'
 alias rlt='rl && rt'
 
+alias workon='source .venv/bin/activate'
+
 alias lt='l && t'
 # Moved to i3 config as keybord shortcuts
 # xset r rate 175 25
