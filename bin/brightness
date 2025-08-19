@@ -43,12 +43,11 @@ ddcutil --bus=${bus_number} setvcp 10 ${current_brightness}
 if [ $? -ne 0 ]; then
     echo "Failed to set the brightness - you may need to update the bus number"
     echo "To find the bus number, run:"
-    echo "  ddutil detect"
+    echo "  ddcutil detect"
     echo "Then update the line:"
     echo "  bus_number=${bus_number}"
     echo "by editing the file:"
     echo "  vim $0"
-    exit 1
 fi
 
 contrast=$((${current_brightness} * 35 / 100 + 40))
