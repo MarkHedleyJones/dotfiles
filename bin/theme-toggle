@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Paths to GTK settings files
+GTK2_SETTINGS_FILE="$HOME/.gtkrc-2.0"
+GTK3_SETTINGS_FILE="$HOME/.config/gtk-3.0/settings.ini"
+GTK4_SETTINGS_FILE="$HOME/.config/gtk-4.0/settings.ini"
+
+# Define your dark and light themes
+DARK_THEME="Adwaita-dark"
+LIGHT_THEME="Adwaita"
+
+# Function to set the GTK theme
+set_theme() {
+    THEME=$1
+
+    # Update GTK 2.0 settings
+    echo "gtk-theme-name=\"$THEME\"" > "$GTK2_SETTINGS_FILE"
+
+    # Update GTK 3.0 settings
+    mkdir -p $(dirname "$GTK3_SETTINGS_FILE")
+    echo -e "[Settings]\ngtk-theme-name=$THEME" > "$GTK3_SETTINGS_FILE"
+
+    # Update GTK 4.0 settings
+    mkdir -p $(dirname "$GTK4_SETTINGS_FILE")
+    echo -e "[Settings]\ngtk-theme-name=$THEME" > "$GTK4_SETTINGS_FILE"
+}
+
+# Read current theme from the GTK 3.0 settings file
+CURRENT_THEME=$(grep "^gtk-theme-name=" "$GTK3_SETTINGS_FILE" | cut -d'=' -f2)
+
+# Toggle theme
+if [ "$CURRENT_THEME" == "$DARK_THEME" ]; then
+    set_theme "$LIGHT_THEME"
+    echo "Switched to light theme: $LIGHT_THEME"
+else
+    set_theme "$DARK_THEME"
+    echo "Switched to dark theme: $DARK_THEME"
+fi
+
+# Reload GTK settings (specific to desktop environment)
+pkill -USR1 gnome-shell
