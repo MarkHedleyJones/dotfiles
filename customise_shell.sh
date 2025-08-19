@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Edit aliases
-alias ea="vim ~/repos/dotfiles/bashrc_custom.sh"
+alias ea="vim ~/repos/dotfiles/customise_shell.sh"
 # Edit bashrc
 alias eb="vim ~/.bashrc"
 # Edit i3 config
@@ -41,9 +41,38 @@ alias .............="cd ../../../../../../../../../../../.."
 LOCAL_BIN="${HOME}/.local/bin"
 
 # If a local binary folder exists but isn't in the $PATH, add it to the $PATH
-if [ -d ${LOCAL_BIN} ] && [ "$(export | grep PATH | grep ${LOCAL_BIN})" == "" ]; then
+if [ -d "${LOCAL_BIN}" ] && [ "$(export | grep PATH | grep ${LOCAL_BIN})" = "" ]; then
     export PATH="${PATH}:${LOCAL_BIN}"
 fi
+
+# Track terminal workspace for notify command
+update_terminal_workspace() {
+    if [ -n "$DISPLAY" ] && command -v i3-msg >/dev/null 2>&1; then
+        local focused_window=$(xdotool getwindowfocus 2>/dev/null)
+        if [ -n "$focused_window" ] && [ "$focused_window" != "1" ]; then
+            export TERMINAL_WORKSPACE=$(i3-msg -t get_tree 2>/dev/null | python3 -c "
+import sys, json
+try:
+    tree = json.load(sys.stdin)
+    target = $focused_window
+    def search(node, ws=None):
+        if node.get('type') == 'workspace':
+            ws = node.get('name')
+        if node.get('window') == target:
+            return ws
+        for child in node.get('nodes', []) + node.get('floating_nodes', []):
+            result = search(child, ws)
+            if result: return result
+        return None
+    print(search(tree) or '')
+except: pass
+" 2>/dev/null)
+        fi
+    fi
+}
+
+# Update workspace info when terminal starts
+update_terminal_workspace
 
 # Load personal/private aliases if they exist
 PERSONAL_ALIASES="${HOME}/.aliases"
