@@ -9,9 +9,9 @@ if [ "$#" -ne 1 ]; then
     echo "Examples:"
     echo "set the brightness of the monitor to 50%"
     echo "$0 50"
-    echo "Increase the brigthnesss of the monitor by 10%"
+    echo "Increase the brightness of the monitor by 10%"
     echo "$0 +10"
-    echo "Decrease the brigthnesss of the monitor by 10%"
+    echo "Decrease the brightness of the monitor by 10%"
     echo "$0 -10"
     exit 1
 fi
