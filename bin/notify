@@ -1,0 +1,36 @@
+#!/bin/bash
+# Find terminal window ID by walking up the process tree
+find_terminal_window() {
+    local pid=$$
+    while [ "$pid" != "1" ]; do
+        local wid=$(xdotool search --pid $pid 2>/dev/null | tail -1)
+        if [ -n "$wid" ]; then
+            echo $wid
+            return
+        fi
+        pid=$(ps -o ppid= -p $pid | tr -d ' ')
+    done
+}
+
+WID=$(find_terminal_window)
+
+if [ -n "$WID" ]; then
+    # Find the workspace that contains this window
+    # We need to find the window first, then traverse up to find its workspace parent
+    WORKSPACE=$(i3-msg -t get_tree | jq -r "
+        .. | objects | 
+        select(.type == \"workspace\" and (.nodes[]?, .floating_nodes[]? | .. | objects | .window == $WID)) | 
+        .name // empty" | head -1)
+    
+    # If no workspace name found directly, try to get the focused workspace
+    if [ -z "$WORKSPACE" ]; then
+        WORKSPACE=$(i3-msg -t get_workspaces | jq -r '.[] | select(.focused == true) | .name')
+    fi
+    
+    # If a message is provided as argument, use notify-send
+    if [ $# -gt 0 ]; then
+        notify-send "Desktop $WORKSPACE" "$*"
+    else
+        echo "This terminal is on workspace: $WORKSPACE"
+    fi
+fi
