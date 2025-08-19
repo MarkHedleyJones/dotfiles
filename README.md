@@ -78,17 +78,7 @@ Slow the speed down by focusing on the speed slider and pressing the left arrow 
 Set the delay by moving the slider all the way to the left and pressing right 15 times.
 
 ### Repeat rate and delay (i3)
-Automatically call the custom shell script on shell start
-
-For bash:
-```
-echo "source ~/repos/dotfiles/customise_shell.sh" >> ~/.bashrc
-```
-
-For zsh:
-```
-echo "source ~/repos/dotfiles/customise_shell.sh" >> ~/.zshrc
-```
+The install script automatically adds shell customization to both `~/.bashrc` and `~/.zshrc` if they exist.
 
 ### Both Shifts as Capslock
 ```
