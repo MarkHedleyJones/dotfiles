@@ -13,12 +13,8 @@ alias mycal12="mycal -B6 -A6"
 alias mycal6="mycal -B3 -A3"
 alias mycal3="mycal"
 
-# Development tools
-alias sm="smerge --new-window ."
-alias st="subl --new-window ."
-alias n="nautilus . --new-window &"
-alias c="clear"
-alias dev="code . && sleep 1 && sm"
+alias f="nautilus . --new-window &" # Files
+alias r="reset" # Reset
 
 # Python virtual environment
 alias workon="source .venv/bin/activate"
