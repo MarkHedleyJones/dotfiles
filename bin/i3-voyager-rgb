@@ -476,6 +476,36 @@ def signal_handler(signum, frame):
 
 def main():
     """Main entry point"""
+    # Kill any existing instances of this script
+    try:
+        # Get current process ID
+        current_pid = os.getpid()
+        
+        # Find all i3-voyager-rgb processes
+        result = subprocess.run(
+            ["pgrep", "-f", "i3-voyager-rgb"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        
+        if result.returncode == 0:
+            pids = result.stdout.strip().split('\n')
+            for pid_str in pids:
+                try:
+                    pid = int(pid_str)
+                    # Don't kill ourselves
+                    if pid != current_pid:
+                        os.kill(pid, signal.SIGTERM)
+                        print(f"✓ Killed existing i3-voyager-rgb process (PID: {pid})")
+                        # Give it a moment to clean up
+                        time.sleep(0.5)
+                except (ValueError, ProcessLookupError):
+                    pass
+    except Exception as e:
+        # Silently continue if we can't kill old processes
+        pass
+    
     print("=" * 50)
     print("i3 Workspace → Voyager RGB Monitor (Lite)")
     print("=" * 50)
