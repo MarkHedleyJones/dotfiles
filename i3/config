@@ -260,6 +260,7 @@ exec --no-startup-id setxkbmap -option "shift:both_capslock"
 exec --no-startup-id ~/.config/i3/launch-ssh-agent.sh
 exec --no-startup-id blueman-applet
 exec --no-startup-id ~/repos/speech-to-text/launcher.sh
+exec --no-startup-id ~/repos/dotfiles/bin/i3-voyager-rgb
 exec --no-startup-id ~/AppImages/keymapp --minimized
 
 client.focused #0088CC #0088CC #ffffff #dddddd
