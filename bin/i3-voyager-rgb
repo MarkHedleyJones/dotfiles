@@ -5,20 +5,21 @@ Uses i3-msg instead of i3ipc library - no extra dependencies needed.
 """
 
 import json
-import subprocess
-import time
-import grpc
-import sys
-import signal
-import threading
 import os
+import signal
+import subprocess
+import sys
+import threading
+import time
 from pathlib import Path
+
+import grpc
 
 # Add the lib directory to path to import keymapp modules
 # Resolve the real path of the script (follows symlinks)
 real_script_path = Path(os.path.realpath(__file__))
 dotfiles_dir = real_script_path.parent.parent  # Go up from bin to dotfiles
-lib_dir = dotfiles_dir / 'lib'
+lib_dir = dotfiles_dir / "lib"
 
 sys.path.insert(0, str(lib_dir))
 
@@ -35,29 +36,93 @@ except ImportError as e:
     sys.exit(1)
 
 # Color definitions for workspace states (R, G, B values 0-255)
+# These are the DESIRED colors - they will be corrected for the keyboard
+DESIRED_COLORS = {
+    "empty": (0, 0, 0),
+    "occupied": (255, 255, 255),
+    "visible": (0, 255, 0),
+    "focused": (255, 255, 0),
+    "urgent": (255, 0, 0),
+}
+
+
+def correct_color_for_keyboard(r, g, b):
+    """
+    Apply color correction to compensate for RGB LED limitations.
+
+    Common RGB LED issues (especially WS2812 variants):
+    - White (255,255,255) appears pink/purple due to lack of dedicated white LED
+    - Colors need brightness limiting to prevent power issues
+    - Green channel is often stronger than red/blue
+
+    This correction is based on:
+    - Your observation: (128, 255, 128) produces better white
+    - Common WS2812 behavior where green dominance helps achieve white
+    """
+    # White correction: reduce red/blue, boost green for better white
+    if r > 250 and g > 250 and b > 250:
+        # Green-dominant mix produces better white on RGB LEDs
+        return (128, 255, 128)
+
+    # Pure blue: reduce intensity to prevent purple tint
+    if b > 200 and r < 50 and g < 50:
+        return (0, 50, 180)
+
+    # Pure green: often appears too bright, reduce slightly
+    if g > 200 and r < 50 and b < 50:
+        return (0, 180, 0)
+
+    # Pure red: usually accurate but may need slight reduction
+    if r > 200 and g < 50 and b < 50:
+        return (220, 0, 0)
+
+    # Yellow: needs balanced red/green
+    if r > 200 and g > 200 and b < 50:
+        return (255, 220, 0)
+
+    # Cyan: balance green/blue
+    if g > 150 and b > 150 and r < 50:
+        return (0, 180, 200)
+
+    # Magenta/Purple: balance red/blue
+    if r > 150 and b > 150 and g < 50:
+        return (200, 0, 220)
+
+    # Orange: more red than green
+    if r > 200 and g > 100 and g < 180 and b < 50:
+        return (255, 140, 0)
+
+    # For other colors, apply slight brightness limiting
+    # to prevent power issues that can affect color accuracy
+    max_val = max(r, g, b)
+    if max_val > 220:
+        factor = 220 / max_val
+        return (int(r * factor), int(g * factor), int(b * factor))
+
+    return (r, g, b)
+
+
+# Actual colors sent to keyboard (after correction)
 COLORS = {
-    'empty': (0, 0, 0),          # Off/black for empty workspaces
-    'occupied': (0, 128, 0),     # Dim blue for workspaces with windows
-    'visible': (0, 50, 150),      # Green for visible on another monitor
-    'focused': (128, 255, 128),   # Bright blue-white for current workspace
-    'urgent': (255, 0, 0),        # Red for urgent workspaces
+    state: correct_color_for_keyboard(*rgb) for state, rgb in DESIRED_COLORS.items()
 }
 
 # Mapping of workspace numbers to F-key LED indices on Voyager
 # These need to be determined by testing - use test-voyager-leds script
 # The Voyager has two halves, LEDs may not be sequential for F-keys
 WORKSPACE_TO_LED = {
-    1: 1,   # LED under F1 position
-    2: 2,   # LED under F2 position
-    3: 3,   # LED under F3 position
-    4: 4,   # LED under F4 position
-    5: 5,   # LED under F5 position
+    1: 1,  # LED under F1 position
+    2: 2,  # LED under F2 position
+    3: 3,  # LED under F3 position
+    4: 4,  # LED under F4 position
+    5: 5,  # LED under F5 position
     6: 26,  # LED under F6 position
     7: 27,  # LED under F7 position
     8: 28,  # LED under F8 position
     9: 29,  # LED under F9 position
-    10: 30, # LED under F10 position
+    10: 30,  # LED under F10 position
 }
+
 
 class VoyagerRGBControl:
     """Control Voyager RGB via Keymapp API"""
@@ -74,9 +139,9 @@ class VoyagerRGBControl:
         """Connect to Keymapp gRPC service"""
         # Try different socket paths that Keymapp might use
         socket_paths = [
-            os.path.expanduser('~/.config/.keymapp/keymapp.sock'),
-            '/tmp/keymapp.sock',
-            os.path.expanduser('~/.keymapp/keymapp.sock'),
+            os.path.expanduser("~/.config/.keymapp/keymapp.sock"),
+            "/tmp/keymapp.sock",
+            os.path.expanduser("~/.keymapp/keymapp.sock"),
         ]
 
         for socket_path in socket_paths:
@@ -84,7 +149,7 @@ class VoyagerRGBControl:
             # print(f"DEBUG: Checking {socket_path}: exists={os.path.exists(socket_path)}")
             if os.path.exists(socket_path):
                 try:
-                    self.channel = grpc.insecure_channel(f'unix://{socket_path}')
+                    self.channel = grpc.insecure_channel(f"unix://{socket_path}")
                     self.stub = keymapp_pb2_grpc.KeyboardServiceStub(self.channel)
 
                     # Test connection with GetStatus
@@ -93,12 +158,16 @@ class VoyagerRGBControl:
                     # Check if keyboard is already connected
                     if status.connected_keyboard.friendly_name:
                         self.connected = True
-                        print(f"✓ Connected to {status.connected_keyboard.friendly_name} via {socket_path}")
+                        print(
+                            f"✓ Connected to {status.connected_keyboard.friendly_name} via {socket_path}"
+                        )
                         self.start_refresh_thread()
                         return True
 
                     # If not connected, try to connect
-                    reply = self.stub.ConnectAnyKeyboard(keymapp_pb2.ConnectAnyKeyboardRequest())
+                    reply = self.stub.ConnectAnyKeyboard(
+                        keymapp_pb2.ConnectAnyKeyboardRequest()
+                    )
                     if reply.success:
                         self.connected = True
                         print(f"✓ Connected to Voyager keyboard via {socket_path}")
@@ -121,6 +190,7 @@ class VoyagerRGBControl:
 
     def start_refresh_thread(self):
         """Start thread to refresh LEDs periodically"""
+
         def refresh_loop():
             while self.running:
                 time.sleep(2)  # Wait 2 seconds between refreshes
@@ -133,7 +203,7 @@ class VoyagerRGBControl:
                                 red=r,
                                 green=g,
                                 blue=b,
-                                sustain=0  # No sustain, we refresh regularly
+                                sustain=0,  # No sustain, we refresh regularly
                             )
                             self.stub.SetRGBLed(request)
                 except:
@@ -160,7 +230,7 @@ class VoyagerRGBControl:
                 red=r,
                 green=g,
                 blue=b,
-                sustain=0  # No sustain, refresh thread handles persistence
+                sustain=0,  # No sustain, refresh thread handles persistence
             )
             reply = self.stub.SetRGBLed(request)
             return reply.success
@@ -178,11 +248,7 @@ class VoyagerRGBControl:
             for led in WORKSPACE_TO_LED.values():
                 try:
                     request = keymapp_pb2.SetRGBLedRequest(
-                        led=led,
-                        red=0,
-                        green=0,
-                        blue=0,
-                        sustain=0
+                        led=led, red=0, green=0, blue=0, sustain=0
                     )
                     self.stub.SetRGBLed(request)
                 except:
@@ -191,14 +257,15 @@ class VoyagerRGBControl:
         if self.channel:
             self.channel.close()
 
+
 def get_workspace_states():
     """Get current state of all workspaces using i3-msg"""
     try:
         result = subprocess.run(
-            ['i3-msg', '-t', 'get_workspaces'],
+            ["i3-msg", "-t", "get_workspaces"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
         workspaces = json.loads(result.stdout)
 
@@ -206,21 +273,21 @@ def get_workspace_states():
 
         # Initialize all workspaces as empty
         for num in WORKSPACE_TO_LED.keys():
-            states[num] = 'empty'
+            states[num] = "empty"
 
         # Update based on actual workspace data
         for ws in workspaces:
             try:
-                num = int(ws['name'])
+                num = int(ws["name"])
                 if num in WORKSPACE_TO_LED:
-                    if ws['focused']:
-                        states[num] = 'focused'
-                    elif ws['visible']:
-                        states[num] = 'visible'
-                    elif ws.get('urgent', False):
-                        states[num] = 'urgent'
+                    if ws["focused"]:
+                        states[num] = "focused"
+                    elif ws["visible"]:
+                        states[num] = "visible"
+                    elif ws.get("urgent", False):
+                        states[num] = "urgent"
                     else:
-                        states[num] = 'occupied'
+                        states[num] = "occupied"
             except (ValueError, KeyError):
                 continue
 
@@ -228,6 +295,7 @@ def get_workspace_states():
     except Exception as e:
         print(f"Error getting workspace states: {e}")
         return {}
+
 
 def update_leds(rgb_control, previous_states=None):
     """Update LEDs based on current workspace states"""
@@ -243,10 +311,57 @@ def update_leds(rgb_control, previous_states=None):
                 led = WORKSPACE_TO_LED[workspace_num]
                 color = COLORS[state]
                 if rgb_control.set_led_color(led, *color):
-                    print(f"  Workspace {workspace_num}: {state} → RGB{color}")
+                    circle = get_color_circle(*color)
+                    print(f"  {circle} Workspace {workspace_num}: {state} → RGB{color}")
                     changed = True
 
     return states, changed
+
+
+def get_color_circle(r, g, b):
+    """Get appropriate colored circle emoji based on RGB values"""
+    # Convert to 0-1 range for analysis
+    r_norm, g_norm, b_norm = r / 255, g / 255, b / 255
+
+    # Black/Off
+    if r < 10 and g < 10 and b < 10:
+        return "⚫"
+
+    # White (all high values)
+    if r > 200 and g > 200 and b > 200:
+        return "⚪"
+
+    # Red dominant
+    if r_norm > max(g_norm, b_norm) * 1.5 and r > 100:
+        return "🔴"
+
+    # Green dominant
+    if g_norm > max(r_norm, b_norm) * 1.5 and g > 100:
+        return "🟢"
+
+    # Blue dominant
+    if b_norm > max(r_norm, g_norm) * 1.5 and b > 100:
+        return "🔵"
+
+    # Yellow (red + green)
+    if r > 150 and g > 150 and b < 100:
+        return "🟡"
+
+    # Purple/Magenta (red + blue)
+    if r > 150 and b > 150 and g < 100:
+        return "🟣"
+
+    # Orange (more red than green, low blue)
+    if r > 200 and g > 100 and g < 200 and b < 100:
+        return "🟠"
+
+    # Brown (dark orange/yellow)
+    if 50 < r < 150 and 25 < g < 100 and b < 50:
+        return "🟤"
+
+    # Default to gray for mixed/unclear colors
+    return "⚪"
+
 
 def monitor_loop(rgb_control):
     """Main monitoring loop using i3-msg subscribe"""
@@ -257,10 +372,10 @@ def monitor_loop(rgb_control):
 
     # Subscribe to i3 events
     process = subprocess.Popen(
-        ['i3-msg', '-t', 'subscribe', '-m', '["workspace", "window"]'],
+        ["i3-msg", "-t", "subscribe", "-m", '["workspace", "window"]'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True
+        text=True,
     )
 
     try:
@@ -272,7 +387,15 @@ def monitor_loop(rgb_control):
             try:
                 event = json.loads(line)
                 # Check if this is an event that might change workspace state
-                if event.get('change') in ['focus', 'init', 'empty', 'urgent', 'new', 'close', 'move']:
+                if event.get("change") in [
+                    "focus",
+                    "init",
+                    "empty",
+                    "urgent",
+                    "new",
+                    "close",
+                    "move",
+                ]:
                     previous_states, changed = update_leds(rgb_control, previous_states)
                     if changed and not rgb_control.connected:
                         # Try to reconnect if we lost connection
@@ -288,9 +411,11 @@ def monitor_loop(rgb_control):
     finally:
         process.terminate()
 
+
 def signal_handler(signum, frame):
     """Handle shutdown signals"""
     raise KeyboardInterrupt
+
 
 def main():
     """Main entry point"""
@@ -304,16 +429,16 @@ def main():
 
     # Check dependencies
     try:
-        subprocess.run(['i3-msg', '--version'],
-                      capture_output=True, check=True)
+        subprocess.run(["i3-msg", "--version"], capture_output=True, check=True)
     except:
         print("✗ Error: i3-msg not found. Is i3 installed?")
         return 1
 
     try:
         # Check for both 'Keymapp' and 'keymapp' (case variations)
-        result = subprocess.run(['pgrep', '-fi', 'keymapp'],
-                              capture_output=True, check=True)
+        result = subprocess.run(
+            ["pgrep", "-fi", "keymapp"], capture_output=True, check=True
+        )
         if result.returncode == 0:
             print("✓ Keymapp is running")
     except:
@@ -334,12 +459,22 @@ def main():
     print()
     print("LED Mapping:")
     print("  Workspace 1-10 → F1-F10 keys")
-    print("\nColors:")
-    print("  ⚫ Empty     = Off")
-    print("  🔵 Occupied  = Blue")
-    print("  🟢 Visible   = Green")
-    print("  ⚪ Focused   = White")
-    print("  🔴 Urgent    = Red")
+    print("\nColors (with keyboard correction):")
+
+    # Show both desired and actual colors
+    for state, desired_rgb in DESIRED_COLORS.items():
+        actual_rgb = COLORS[state]
+        desired_circle = get_color_circle(*desired_rgb)
+        state_display = state.capitalize().ljust(10)
+
+        # Show desired color and the correction being applied
+        if desired_rgb != actual_rgb:
+            print(
+                f"  {desired_circle} {state_display} = RGB{desired_rgb} → RGB{actual_rgb} (corrected)"
+            )
+        else:
+            print(f"  {desired_circle} {state_display} = RGB{desired_rgb}")
+
     print()
 
     try:
@@ -349,6 +484,7 @@ def main():
         print("✓ LEDs cleared")
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
