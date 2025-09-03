@@ -102,6 +102,10 @@ bindsym ctrl+shift+b exec printf "$(date +%Y-W%V-%u) ($(date +%F))" | xclip -sel
 for_window [class="CALENDAR"] floating enable, resize grow left 0, resize grow right 0, resize grow up 170, resize grow down 170;
 for_window [class="HTOP"] floating enable, fullscreen enable;
 
+# Assign keymapp to workspace 10
+assign [class="keymapp"] 10
+assign [class="Keymapp"] 10
+
 #bindsym $mod+j exec xrandr -o left
 #bindsym $mod+k exec xrandr -o normal
 #bindkey 64+34$mod+0x5b exec xrandr -o left
@@ -259,9 +263,9 @@ exec --no-startup-id xset r rate 200 20
 exec --no-startup-id setxkbmap -option "shift:both_capslock"
 exec --no-startup-id ~/.config/i3/launch-ssh-agent.sh
 exec --no-startup-id blueman-applet
-exec --no-startup-id ~/repos/speech-to-text/launcher.sh
-exec --no-startup-id ~/repos/dotfiles/bin/i3-voyager-rgb
 exec --no-startup-id ~/AppImages/keymapp --minimized
+exec --no-startup-id bash -c "sleep 3 && ~/repos/speech-to-text/launcher.sh"
+exec --no-startup-id bash -c "sleep 3 && ~/repos/dotfiles/bin/i3-voyager-rgb"
 
 client.focused #0088CC #0088CC #ffffff #dddddd
 client.focused_inactive #333333 #333333 #888888 #292d2e
