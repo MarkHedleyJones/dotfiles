@@ -36,7 +36,20 @@ fi
 
 # Send notification
 if [ $# -gt 0 ]; then
+    # Send the notification
     notify-send "Desktop $WORKSPACE" "$*"
+    
+    # Set urgent hint using the stored terminal window ID
+    if [ -n "$TERMINAL_WINDOW_ID" ]; then
+        # Use the window ID that was captured when this terminal started
+        wmctrl -i -r "$TERMINAL_WINDOW_ID" -b add,demands_attention 2>/dev/null
+    else
+        # Fallback: try to get and set the current active window as urgent
+        WINDOW_ID=$(xdotool getactivewindow 2>/dev/null)
+        if [ -n "$WINDOW_ID" ]; then
+            wmctrl -i -r "$WINDOW_ID" -b add,demands_attention 2>/dev/null
+        fi
+    fi
 else
     echo "Using workspace: $WORKSPACE"
     echo "TERMINAL_WORKSPACE env: $TERMINAL_WORKSPACE"
