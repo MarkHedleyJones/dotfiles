@@ -41,11 +41,15 @@ if [ -d "${LOCAL_BIN}" ] && [ "$(export | grep PATH | grep ${LOCAL_BIN})" = "" ]
     export PATH="${PATH}:${LOCAL_BIN}"
 fi
 
-# Track terminal workspace for notify command
+# Track terminal workspace and window ID for notify command
 update_terminal_workspace() {
     if [ -n "$DISPLAY" ] && command -v i3-msg >/dev/null 2>&1; then
         local focused_window=$(xdotool getwindowfocus 2>/dev/null)
         if [ -n "$focused_window" ] && [ "$focused_window" != "1" ]; then
+            # Store the window ID for this terminal
+            export TERMINAL_WINDOW_ID="$focused_window"
+            
+            # Also get the workspace
             export TERMINAL_WORKSPACE=$(i3-msg -t get_tree 2>/dev/null | python3 -c "
 import sys, json
 try:
