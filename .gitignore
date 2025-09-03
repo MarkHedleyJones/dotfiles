@@ -3,3 +3,12 @@
 *.swp
 *~
 .DS_Store
+
+# IDE and editor files
+.vscode/
+
+# Python cache
+lib/__pycache__/
+
+# Claude configuration
+CLAUDE.md
