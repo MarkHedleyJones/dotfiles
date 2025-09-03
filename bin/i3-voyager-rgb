@@ -35,77 +35,96 @@ except ImportError as e:
     print(f"\nDetails: {e}")
     sys.exit(1)
 
-# Color definitions for workspace states (R, G, B values 0-255)
-# These are the DESIRED colors - they will be corrected for the keyboard
-DESIRED_COLORS = {
-    "empty": (0, 0, 0),
-    "occupied": (255, 255, 255),
-    "visible": (0, 255, 0),
-    "focused": (255, 255, 0),
-    "urgent": (255, 0, 0),
+
+# Load color definitions from keyboard-led-colours.json
+def load_color_palette():
+    """Load calibrated colors from keyboard-led-colours.json"""
+    import json
+    from pathlib import Path
+
+    colors_file = Path(__file__).parent.parent / "keyboard-led-colours.json"
+    if colors_file.exists():
+        try:
+            with open(colors_file, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"⚠ Warning: Could not load keyboard-led-colours.json: {e}")
+
+    # Return default colors if file not found
+    print("⚠ Warning: keyboard-led-colours.json not found, using defaults")
+    return {
+        "off": [0, 0, 0],
+        "white": [110, 110, 110],
+        "white_dim": [30, 30, 30],
+        "white_bright": [255, 255, 255],
+        "red": [70, 0, 0],
+        "red_dim": [30, 0, 0],
+        "red_bright": [255, 0, 0],
+        "green": [0, 110, 0],
+        "green_dim": [0, 30, 0],
+        "green_bright": [0, 255, 0],
+        "blue": [0, 0, 110],
+        "blue_dim": [0, 0, 30],
+        "blue_bright": [0, 0, 255],
+        "yellow": [110, 110, 0],
+        "yellow_dim": [30, 30, 0],
+        "yellow_bright": [255, 255, 0],
+    }
+
+
+# Load color palette
+COLOR_PALETTE = load_color_palette()
+
+# Define workspace state to color name mapping
+# Using color names as strings that reference the palette
+STATE_COLOR_MAP = {
+    "empty": "off",  # No color
+    "occupied": "white",  # Normal white
+    "claude_ready": "green",  # Green for ready
+    "claude_busy": "yellow",  # Yellow for busy
+    "visible": "white",  # Blue for visible
+    "focused": "white",  # Blue for focused (will use bright)
+    "urgent": "red",  # Red for urgent
 }
 
 
-def correct_color_for_keyboard(r, g, b):
-    """
-    Apply color correction to compensate for RGB LED limitations.
+# Get RGB values from color names
+def get_color_rgb(color_name, brightness="normal"):
+    """Get RGB values for a color name with brightness level"""
+    if brightness == "dim":
+        key = f"{color_name}_dim"
+    elif brightness == "bright":
+        key = f"{color_name}_bright"
+    else:
+        key = color_name
 
-    Common RGB LED issues (especially WS2812 variants):
-    - White (255,255,255) appears pink/purple due to lack of dedicated white LED
-    - Colors need brightness limiting to prevent power issues
-    - Green channel is often stronger than red/blue
+    # Special case for "off"
+    if color_name == "off":
+        return [0, 0, 0]
 
-    This correction is based on:
-    - Your observation: (128, 255, 128) produces better white
-    - Common WS2812 behavior where green dominance helps achieve white
-    """
-    # White correction: reduce red/blue, boost green for better white
-    if r > 250 and g > 250 and b > 250:
-        # Green-dominant mix produces better white on RGB LEDs
-        return (128, 255, 128)
-
-    # Pure blue: reduce intensity to prevent purple tint
-    if b > 200 and r < 50 and g < 50:
-        return (0, 50, 180)
-
-    # Pure green: often appears too bright, reduce slightly
-    if g > 200 and r < 50 and b < 50:
-        return (0, 180, 0)
-
-    # Pure red: usually accurate but may need slight reduction
-    if r > 200 and g < 50 and b < 50:
-        return (220, 0, 0)
-
-    # Yellow: needs balanced red/green
-    if r > 200 and g > 200 and b < 50:
-        return (255, 220, 0)
-
-    # Cyan: balance green/blue
-    if g > 150 and b > 150 and r < 50:
-        return (0, 180, 200)
-
-    # Magenta/Purple: balance red/blue
-    if r > 150 and b > 150 and g < 50:
-        return (200, 0, 220)
-
-    # Orange: more red than green
-    if r > 200 and g > 100 and g < 180 and b < 50:
-        return (255, 140, 0)
-
-    # For other colors, apply slight brightness limiting
-    # to prevent power issues that can affect color accuracy
-    max_val = max(r, g, b)
-    if max_val > 220:
-        factor = 220 / max_val
-        return (int(r * factor), int(g * factor), int(b * factor))
-
-    return (r, g, b)
+    # Get color from palette, with fallback
+    if key in COLOR_PALETTE:
+        return COLOR_PALETTE[key]
+    elif color_name in COLOR_PALETTE:
+        return COLOR_PALETTE[color_name]
+    else:
+        return [0, 0, 0]  # Default to off if color not found
 
 
-# Actual colors sent to keyboard (after correction)
-COLORS = {
-    state: correct_color_for_keyboard(*rgb) for state, rgb in DESIRED_COLORS.items()
-}
+# Build color lookup for all states
+COLORS = {}
+
+# For each state, create unfocused (dim) and focused (bright) versions
+for state, color_name in STATE_COLOR_MAP.items():
+    # Unfocused = dim version
+    rgb_dim = get_color_rgb(color_name, "dim")
+    COLORS[state] = tuple(rgb_dim)
+
+    # Focused = bright version
+    rgb_bright = get_color_rgb(color_name, "bright")
+    COLORS[f"{state}_focused"] = tuple(rgb_bright)
+
+print(f"✓ Loaded {len(COLOR_PALETTE)} colors from keyboard-led-colours.json")
 
 # Mapping of workspace numbers to F-key LED indices on Voyager
 # These need to be determined by testing - use test-voyager-leds script
@@ -258,8 +277,32 @@ class VoyagerRGBControl:
             self.channel.close()
 
 
+def get_claude_states():
+    """Get Claude status for each workspace"""
+    claude_states = {}
+    status_file = Path.home() / ".claude" / "workspace-status.json"
+
+    if status_file.exists():
+        try:
+            with open(status_file, "r") as f:
+                data = json.load(f)
+                for ws in range(1, 11):
+                    ws_str = str(ws)
+                    if ws_str in data:
+                        status = data[ws_str]
+                        if status == "busy":
+                            claude_states[ws] = "claude_busy"
+                        elif status == "ready":
+                            claude_states[ws] = "claude_ready"
+                        # Empty string or "idle" means no Claude activity
+        except Exception:
+            pass  # Ignore errors reading Claude status
+
+    return claude_states
+
+
 def get_workspace_states():
-    """Get current state of all workspaces using i3-msg"""
+    """Get current state of all workspaces using i3-msg and Claude status"""
     try:
         result = subprocess.run(
             ["i3-msg", "-t", "get_workspaces"],
@@ -270,24 +313,32 @@ def get_workspace_states():
         workspaces = json.loads(result.stdout)
 
         states = {}
+        claude_states = get_claude_states()
 
         # Initialize all workspaces as empty
         for num in WORKSPACE_TO_LED.keys():
-            states[num] = "empty"
+            states[num] = ("empty", False)  # (state, is_focused)
 
         # Update based on actual workspace data
         for ws in workspaces:
             try:
                 num = int(ws["name"])
                 if num in WORKSPACE_TO_LED:
-                    if ws["focused"]:
-                        states[num] = "focused"
+                    is_focused = ws["focused"]
+
+                    # Priority order for base state: urgent > claude_busy > claude_ready > visible > occupied
+                    if ws.get("urgent", False):
+                        base_state = "urgent"
+                    elif num in claude_states and claude_states[num] == "claude_busy":
+                        base_state = "claude_busy"
+                    elif num in claude_states and claude_states[num] == "claude_ready":
+                        base_state = "claude_ready"
                     elif ws["visible"]:
-                        states[num] = "visible"
-                    elif ws.get("urgent", False):
-                        states[num] = "urgent"
+                        base_state = "visible"  # Visible but not focused
                     else:
-                        states[num] = "occupied"
+                        base_state = "occupied"
+
+                    states[num] = (base_state, is_focused)
             except (ValueError, KeyError):
                 continue
 
@@ -305,14 +356,20 @@ def update_leds(rgb_control, previous_states=None):
         previous_states = {}
 
     changed = False
-    for workspace_num, state in states.items():
+    for workspace_num, (base_state, is_focused) in states.items():
         if workspace_num in WORKSPACE_TO_LED:
-            if previous_states.get(workspace_num) != state:
+            # Create state key with focus suffix
+            state_key = f"{base_state}_focused" if is_focused else base_state
+
+            if previous_states.get(workspace_num) != (base_state, is_focused):
                 led = WORKSPACE_TO_LED[workspace_num]
-                color = COLORS[state]
+                color = COLORS[state_key]
                 if rgb_control.set_led_color(led, *color):
                     circle = get_color_circle(*color)
-                    print(f"  {circle} Workspace {workspace_num}: {state} → RGB{color}")
+                    focus_indicator = " [FOCUSED]" if is_focused else ""
+                    print(
+                        f"  {circle} Workspace {workspace_num}: {base_state}{focus_indicator} → RGB{color}"
+                    )
                     changed = True
 
     return states, changed
@@ -459,21 +516,38 @@ def main():
     print()
     print("LED Mapping:")
     print("  Workspace 1-10 → F1-F10 keys")
-    print("\nColors (with keyboard correction):")
+    print("\nColor Mappings (from keyboard-led-colours.json):")
+    print()
 
-    # Show both desired and actual colors
-    for state, desired_rgb in DESIRED_COLORS.items():
-        actual_rgb = COLORS[state]
-        desired_circle = get_color_circle(*desired_rgb)
-        state_display = state.capitalize().ljust(10)
-
-        # Show desired color and the correction being applied
-        if desired_rgb != actual_rgb:
-            print(
-                f"  {desired_circle} {state_display} = RGB{desired_rgb} → RGB{actual_rgb} (corrected)"
-            )
+    # Show color mappings
+    for base_state, color_name in STATE_COLOR_MAP.items():
+        # Format state display name
+        if base_state == "claude_ready":
+            state_display = "Claude Ready"
+        elif base_state == "claude_busy":
+            state_display = "Claude Busy"
         else:
-            print(f"  {desired_circle} {state_display} = RGB{desired_rgb}")
+            state_display = base_state.capitalize()
+
+        # Show unfocused version
+        unfocused_key = base_state
+        unfocused_actual = COLORS[unfocused_key]
+        unfocused_circle = get_color_circle(*unfocused_actual)
+
+        # Show focused version
+        focused_key = f"{base_state}_focused"
+        focused_actual = COLORS[focused_key]
+        focused_circle = get_color_circle(*focused_actual)
+
+        state_display = state_display.ljust(12)
+
+        # Print both unfocused and focused versions with color names
+        print(
+            f"  {unfocused_circle} {state_display} unfocused: {color_name}_dim → RGB{unfocused_actual}"
+        )
+        print(
+            f"  {focused_circle} {state_display} focused:   {color_name}_bright → RGB{focused_actual}"
+        )
 
     print()
 
