@@ -56,6 +56,27 @@ if [ ! -L ${HOME}/.screenlayout ]; then
     fi
 fi
 
+# Set up keyboard configuration
+KEYBOARD_CONFIG_DIR="${HOME}/.config/keyboard"
+if [ ! -d ${KEYBOARD_CONFIG_DIR} ]; then
+    echo "Creating keyboard configuration directory at: ${KEYBOARD_CONFIG_DIR}"
+    mkdir -p ${KEYBOARD_CONFIG_DIR}
+fi
+
+# Link keyboard color configuration files
+if [ -d ${SCRIPT_DIR}/keyboard ]; then
+    for config_file in $(ls ${SCRIPT_DIR}/keyboard/*.json 2>/dev/null); do
+        filename=$(basename "${config_file}")
+        target="${KEYBOARD_CONFIG_DIR}/${filename}"
+        if [ ! -L "${target}" ]; then
+            echo "Linking keyboard config: ${filename}"
+            ln -sf "${config_file}" "${target}"
+        fi
+    done
+else
+    echo "Warning: ${SCRIPT_DIR}/keyboard does not exist, skipping keyboard configuration"
+fi
+
 # Set up personal aliases file if it doesn't exist
 if [ ! -f "${PERSONAL_ALIASES}" ]; then
     echo "Creating personal aliases file from template..."
