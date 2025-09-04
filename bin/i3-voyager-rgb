@@ -4,6 +4,7 @@ Lightweight version of i3 workspace RGB monitor for Voyager keyboard.
 Uses i3-msg instead of i3ipc library - no extra dependencies needed.
 """
 
+import argparse
 import json
 import os
 import signal
@@ -14,6 +15,14 @@ import time
 from pathlib import Path
 
 import grpc
+
+# Global verbose flag
+VERBOSE = False
+
+def log(message, always=False):
+    """Print message only if verbose mode is enabled or always=True"""
+    if VERBOSE or always:
+        print(message)
 
 # Add the lib directory to path to import keymapp modules
 # Resolve the real path of the script (follows symlinks)
@@ -48,10 +57,10 @@ def load_color_palette():
             with open(colors_file, "r") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"⚠ Warning: Could not load keyboard-led-colours.json: {e}")
+            log(f"⚠ Warning: Could not load keyboard-led-colours.json: {e}", always=True)
 
     # Return default colors if file not found
-    print("⚠ Warning: keyboard-led-colours.json not found, using defaults")
+    log("⚠ Warning: keyboard-led-colours.json not found, using defaults", always=True)
     return {
         "off": [0, 0, 0],
         "white": [110, 110, 110],
@@ -124,7 +133,7 @@ for state, color_name in STATE_COLOR_MAP.items():
     rgb_bright = get_color_rgb(color_name, "bright")
     COLORS[f"{state}_focused"] = tuple(rgb_bright)
 
-print(f"✓ Loaded {len(COLOR_PALETTE)} colors from keyboard-led-colours.json")
+log(f"✓ Loaded {len(COLOR_PALETTE)} colors from keyboard-led-colours.json")
 
 # Mapping of workspace numbers to F-key LED indices on Voyager
 # These need to be determined by testing - use test-voyager-leds script
@@ -177,7 +186,7 @@ class VoyagerRGBControl:
                     # Check if keyboard is already connected
                     if status.connected_keyboard.friendly_name:
                         self.connected = True
-                        print(
+                        log(
                             f"✓ Connected to {status.connected_keyboard.friendly_name} via {socket_path}"
                         )
                         self.start_refresh_thread()
@@ -189,11 +198,11 @@ class VoyagerRGBControl:
                     )
                     if reply.success:
                         self.connected = True
-                        print(f"✓ Connected to Voyager keyboard via {socket_path}")
+                        log(f"✓ Connected to Voyager keyboard via {socket_path}")
                         self.start_refresh_thread()
                         return True
                     else:
-                        print("✗ Failed to connect to keyboard")
+                        log("✗ Failed to connect to keyboard", always=True)
                         return False
 
                 except grpc.RpcError as e:
@@ -203,8 +212,8 @@ class VoyagerRGBControl:
                     # print(f"DEBUG: Exception: {e}")
                     continue  # Try next socket path
 
-        print(f"✗ Cannot connect to Keymapp (no socket found)")
-        print(f"  Checked: {', '.join(socket_paths)}")
+        log(f"✗ Cannot connect to Keymapp (no socket found)", always=True)
+        log(f"  Checked: {', '.join(socket_paths)}", always=True)
         return False
 
     def start_refresh_thread(self):
@@ -344,7 +353,7 @@ def get_workspace_states():
 
         return states
     except Exception as e:
-        print(f"Error getting workspace states: {e}")
+        log(f"Error getting workspace states: {e}", always=True)
         return {}
 
 
@@ -367,7 +376,7 @@ def update_leds(rgb_control, previous_states=None):
                 if rgb_control.set_led_color(led, *color):
                     circle = get_color_circle(*color)
                     focus_indicator = " [FOCUSED]" if is_focused else ""
-                    print(
+                    log(
                         f"  {circle} Workspace {workspace_num}: {base_state}{focus_indicator} → RGB{color}"
                     )
                     changed = True
@@ -422,7 +431,7 @@ def get_color_circle(r, g, b):
 
 def monitor_loop(rgb_control):
     """Main monitoring loop using i3-msg subscribe"""
-    print("Monitoring i3 workspaces... (Ctrl+C to exit)")
+    log("Monitoring i3 workspaces... (Ctrl+C to exit)")
 
     # Set initial state
     previous_states, _ = update_leds(rgb_control)
@@ -461,10 +470,10 @@ def monitor_loop(rgb_control):
             except json.JSONDecodeError:
                 continue
             except Exception as e:
-                print(f"Error processing event: {e}")
+                log(f"Error processing event: {e}", always=True)
 
     except KeyboardInterrupt:
-        print("\n✓ Stopping monitor...")
+        log("\n✓ Stopping monitor...")
     finally:
         process.terminate()
 
@@ -476,6 +485,16 @@ def signal_handler(signum, frame):
 
 def main():
     """Main entry point"""
+    global VERBOSE
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="i3 Workspace RGB Monitor for Voyager")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="Enable verbose output for debugging")
+    args = parser.parse_args()
+    
+    VERBOSE = args.verbose
+    
     # Kill any existing instances of this script
     try:
         # Get current process ID
@@ -497,7 +516,7 @@ def main():
                     # Don't kill ourselves
                     if pid != current_pid:
                         os.kill(pid, signal.SIGTERM)
-                        print(f"✓ Killed existing i3-voyager-rgb process (PID: {pid})")
+                        log(f"✓ Killed existing i3-voyager-rgb process (PID: {pid})", always=True)
                         # Give it a moment to clean up
                         time.sleep(0.5)
                 except (ValueError, ProcessLookupError):
@@ -506,9 +525,9 @@ def main():
         # Silently continue if we can't kill old processes
         pass
     
-    print("=" * 50)
-    print("i3 Workspace → Voyager RGB Monitor (Lite)")
-    print("=" * 50)
+    log("=" * 50)
+    log("i3 Workspace → Voyager RGB Monitor (Lite)")
+    log("=" * 50)
 
     # Set up signal handlers
     signal.signal(signal.SIGINT, signal_handler)
@@ -518,7 +537,7 @@ def main():
     try:
         subprocess.run(["i3-msg", "--version"], capture_output=True, check=True)
     except:
-        print("✗ Error: i3-msg not found. Is i3 installed?")
+        log("✗ Error: i3-msg not found. Is i3 installed?", always=True)
         return 1
 
     try:
@@ -527,27 +546,27 @@ def main():
             ["pgrep", "-fi", "keymapp"], capture_output=True, check=True
         )
         if result.returncode == 0:
-            print("✓ Keymapp is running")
+            log("✓ Keymapp is running")
     except:
-        print("⚠ Warning: Keymapp doesn't appear to be running")
-        print("  Please start Keymapp for LED control to work")
-        print()
+        log("⚠ Warning: Keymapp doesn't appear to be running", always=True)
+        log("  Please start Keymapp for LED control to work", always=True)
+        log("")
 
     # Initialize RGB control
     rgb_control = VoyagerRGBControl()
     if not rgb_control.connect():
-        print("\n✗ Failed to connect to Keymapp")
-        print("  Please ensure:")
-        print("  1. Keymapp is running")
-        print("  2. Your Voyager keyboard is connected")
-        print("  3. You're in the speech-to-text venv (if needed)")
+        log("\n✗ Failed to connect to Keymapp", always=True)
+        log("  Please ensure:", always=True)
+        log("  1. Keymapp is running", always=True)
+        log("  2. Your Voyager keyboard is connected", always=True)
+        log("  3. You're in the speech-to-text venv (if needed)", always=True)
         return 1
 
-    print()
-    print("LED Mapping:")
-    print("  Workspace 1-10 → F1-F10 keys")
-    print("\nColor Mappings (from keyboard-led-colours.json):")
-    print()
+    log("")
+    log("LED Mapping:")
+    log("  Workspace 1-10 → F1-F10 keys")
+    log("\nColor Mappings (from keyboard-led-colours.json):")
+    log("")
 
     # Show color mappings
     for base_state, color_name in STATE_COLOR_MAP.items():
@@ -572,20 +591,20 @@ def main():
         state_display = state_display.ljust(12)
 
         # Print both unfocused and focused versions with color names
-        print(
+        log(
             f"  {unfocused_circle} {state_display} unfocused: {color_name}_dim → RGB{unfocused_actual}"
         )
-        print(
+        log(
             f"  {focused_circle} {state_display} focused:   {color_name}_bright → RGB{focused_actual}"
         )
 
-    print()
+    log("")
 
     try:
         monitor_loop(rgb_control)
     finally:
         rgb_control.cleanup()
-        print("✓ LEDs cleared")
+        log("✓ LEDs cleared")
 
     return 0
 
