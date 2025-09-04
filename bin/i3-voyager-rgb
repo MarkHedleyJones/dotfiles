@@ -19,10 +19,12 @@ import grpc
 # Global verbose flag
 VERBOSE = False
 
+
 def log(message, always=False):
     """Print message only if verbose mode is enabled or always=True"""
     if VERBOSE or always:
         print(message)
+
 
 # Add the lib directory to path to import keymapp modules
 # Resolve the real path of the script (follows symlinks)
@@ -57,7 +59,9 @@ def load_color_palette():
             with open(colors_file, "r") as f:
                 return json.load(f)
         except Exception as e:
-            log(f"⚠ Warning: Could not load keyboard-led-colours.json: {e}", always=True)
+            log(
+                f"⚠ Warning: Could not load keyboard-led-colours.json: {e}", always=True
+            )
 
     # Return default colors if file not found
     log("⚠ Warning: keyboard-led-colours.json not found, using defaults", always=True)
@@ -430,14 +434,36 @@ def get_color_circle(r, g, b):
 
 
 def monitor_loop(rgb_control):
-    """Main monitoring loop using i3-msg subscribe"""
-    log("Monitoring i3 workspaces... (Ctrl+C to exit)")
+    """Main monitoring loop using i3-msg subscribe and inotify file monitoring"""
+    log("Monitoring i3 workspaces and Claude status... (Ctrl+C to exit)")
 
     # Set initial state
     previous_states, _ = update_leds(rgb_control)
 
+    # Set up file watching for Claude status file
+    status_file = Path.home() / ".claude" / "workspace-status.json"
+
+    # Start inotify process to watch the file
+    inotify_process = None
+    if status_file.exists():
+        # Use inotifywait to monitor the specific file for modifications
+        # Watch the directory for moves and the file for modifications
+        inotify_process = subprocess.Popen(
+            [
+                "inotifywait",
+                "-m",
+                "-e",
+                "modify,moved_to",
+                str(status_file.parent),  # Watch the directory
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        log(f"Watching {status_file} for changes")
+
     # Subscribe to i3 events
-    process = subprocess.Popen(
+    i3_process = subprocess.Popen(
         ["i3-msg", "-t", "subscribe", "-m", '["workspace", "window"]'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -445,37 +471,65 @@ def monitor_loop(rgb_control):
     )
 
     try:
-        while True:
-            line = process.stdout.readline()
-            if not line:
-                break
+        # Use select to monitor both i3 events and file changes
+        import select
 
-            try:
-                event = json.loads(line)
-                # Check if this is an event that might change workspace state
-                if event.get("change") in [
-                    "focus",
-                    "init",
-                    "empty",
-                    "urgent",
-                    "new",
-                    "close",
-                    "move",
-                ]:
+        while True:
+            # Build list of file descriptors to monitor
+            fds = [i3_process.stdout]
+            if inotify_process and inotify_process.poll() is None:
+                fds.append(inotify_process.stdout)
+
+            # Wait for events from either source
+            readable, _, _ = select.select(fds, [], [], 1.0)
+
+            # Check for i3 events
+            if i3_process.stdout in readable:
+                line = i3_process.stdout.readline()
+                if not line:
+                    break
+
+                try:
+                    event = json.loads(line)
+                    # Check if this is an event that might change workspace state
+                    if event.get("change") in [
+                        "focus",
+                        "init",
+                        "empty",
+                        "urgent",
+                        "new",
+                        "close",
+                        "move",
+                    ]:
+                        previous_states, changed = update_leds(
+                            rgb_control, previous_states
+                        )
+                        if changed and not rgb_control.connected:
+                            # Try to reconnect if we lost connection
+                            rgb_control.connect()
+                            update_leds(rgb_control, {})  # Force full update
+                except json.JSONDecodeError:
+                    continue
+                except Exception as e:
+                    log(f"Error processing i3 event: {e}", always=True)
+
+            # Check for file change events
+            if inotify_process and inotify_process.stdout in readable:
+                event_line = inotify_process.stdout.readline()
+                # Check if this event is for our workspace-status.json file
+                if event_line and "workspace-status.json" in event_line:
+                    log("Claude status file changed, updating LEDs...")
                     previous_states, changed = update_leds(rgb_control, previous_states)
                     if changed and not rgb_control.connected:
-                        # Try to reconnect if we lost connection
                         rgb_control.connect()
-                        update_leds(rgb_control, {})  # Force full update
-            except json.JSONDecodeError:
-                continue
-            except Exception as e:
-                log(f"Error processing event: {e}", always=True)
+                        update_leds(rgb_control, {})
 
     except KeyboardInterrupt:
         log("\n✓ Stopping monitor...")
     finally:
-        process.terminate()
+        i3_process.terminate()
+        if inotify_process:
+            inotify_process.terminate()
 
 
 def signal_handler(signum, frame):
@@ -486,37 +540,44 @@ def signal_handler(signum, frame):
 def main():
     """Main entry point"""
     global VERBOSE
-    
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="i3 Workspace RGB Monitor for Voyager")
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help="Enable verbose output for debugging")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output for debugging",
+    )
     args = parser.parse_args()
-    
+
     VERBOSE = args.verbose
-    
+
     # Kill any existing instances of this script
     try:
         # Get current process ID
         current_pid = os.getpid()
-        
+
         # Find all i3-voyager-rgb processes
         result = subprocess.run(
             ["pgrep", "-f", "i3-voyager-rgb"],
             capture_output=True,
             text=True,
-            check=False
+            check=False,
         )
-        
+
         if result.returncode == 0:
-            pids = result.stdout.strip().split('\n')
+            pids = result.stdout.strip().split("\n")
             for pid_str in pids:
                 try:
                     pid = int(pid_str)
                     # Don't kill ourselves
                     if pid != current_pid:
                         os.kill(pid, signal.SIGTERM)
-                        log(f"✓ Killed existing i3-voyager-rgb process (PID: {pid})", always=True)
+                        log(
+                            f"✓ Killed existing i3-voyager-rgb process (PID: {pid})",
+                            always=True,
+                        )
                         # Give it a moment to clean up
                         time.sleep(0.5)
                 except (ValueError, ProcessLookupError):
@@ -524,7 +585,7 @@ def main():
     except Exception as e:
         # Silently continue if we can't kill old processes
         pass
-    
+
     log("=" * 50)
     log("i3 Workspace → Voyager RGB Monitor (Lite)")
     log("=" * 50)
