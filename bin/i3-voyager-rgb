@@ -85,7 +85,7 @@ def load_color_palette():
     }
 
 
-# Load color palette
+# Load color palette (made mutable for reloading)
 COLOR_PALETTE = load_color_palette()
 
 # Define workspace state to color name mapping
@@ -124,20 +124,38 @@ def get_color_rgb(color_name, brightness="normal"):
         return [0, 0, 0]  # Default to off if color not found
 
 
-# Build color lookup for all states
+# Build color lookup for all states (made mutable for reloading)
 COLORS = {}
 
-# For each state, create unfocused (dim) and focused (bright) versions
-for state, color_name in STATE_COLOR_MAP.items():
-    # Unfocused = dim version
-    rgb_dim = get_color_rgb(color_name, "dim")
-    COLORS[state] = tuple(rgb_dim)
 
-    # Focused = bright version
-    rgb_bright = get_color_rgb(color_name, "bright")
-    COLORS[f"{state}_focused"] = tuple(rgb_bright)
+def rebuild_colors():
+    """Rebuild the COLORS dictionary from the current COLOR_PALETTE"""
+    global COLORS
+    COLORS = {}
+    
+    # For each state, create unfocused (dim) and focused (bright) versions
+    for state, color_name in STATE_COLOR_MAP.items():
+        # Unfocused = dim version
+        rgb_dim = get_color_rgb(color_name, "dim")
+        COLORS[state] = tuple(rgb_dim)
 
-log(f"✓ Loaded {len(COLOR_PALETTE)} colors from keyboard-led-colours.json")
+        # Focused = bright version
+        rgb_bright = get_color_rgb(color_name, "bright")
+        COLORS[f"{state}_focused"] = tuple(rgb_bright)
+    
+    log(f"✓ Rebuilt color mappings from {len(COLOR_PALETTE)} colors")
+
+
+def reload_color_palette():
+    """Reload the color palette from disk and rebuild color mappings"""
+    global COLOR_PALETTE
+    COLOR_PALETTE = load_color_palette()
+    rebuild_colors()
+    log(f"✓ Reloaded {len(COLOR_PALETTE)} colors from keyboard-led-colours.json", always=True)
+
+
+# Initial build of colors
+rebuild_colors()
 
 # Mapping of workspace numbers to F-key LED indices on Voyager
 # These need to be determined by testing - use test-voyager-leds script
@@ -435,20 +453,29 @@ def get_color_circle(r, g, b):
 
 def monitor_loop(rgb_control):
     """Main monitoring loop using i3-msg subscribe and inotify file monitoring"""
-    log("Monitoring i3 workspaces and Claude status... (Ctrl+C to exit)")
+    log("Monitoring i3 workspaces, Claude status, and keyboard colors... (Ctrl+C to exit)")
 
     # Set initial state
     previous_states, _ = update_leds(rgb_control)
 
     # Set up file watching for Claude status file
     status_file = Path.home() / ".claude" / "workspace-status.json"
+    
+    # Set up file watching for keyboard colors file
+    # Follow symlink to watch the actual file location
+    colors_file = Path.home() / ".config" / "keyboard" / "keyboard-led-colours.json"
+    if colors_file.is_symlink():
+        colors_file = Path(os.path.realpath(colors_file))
+        log(f"Following symlink to actual colors file: {colors_file}")
 
-    # Start inotify process to watch the file
-    inotify_process = None
+    # Start inotify processes to watch both files
+    inotify_processes = []
+    
+    # Watch Claude status file
     if status_file.exists():
         # Use inotifywait to monitor the specific file for modifications
         # Watch the directory for moves and the file for modifications
-        inotify_process = subprocess.Popen(
+        status_inotify = subprocess.Popen(
             [
                 "inotifywait",
                 "-m",
@@ -460,7 +487,25 @@ def monitor_loop(rgb_control):
             stderr=subprocess.DEVNULL,
             text=True,
         )
+        inotify_processes.append((status_inotify, "workspace-status.json"))
         log(f"Watching {status_file} for changes")
+    
+    # Watch keyboard colors file
+    if colors_file.exists():
+        colors_inotify = subprocess.Popen(
+            [
+                "inotifywait",
+                "-m",
+                "-e",
+                "modify,moved_to",
+                str(colors_file.parent),  # Watch the directory
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        inotify_processes.append((colors_inotify, "keyboard-led-colours.json"))
+        log(f"Watching {colors_file} for changes")
 
     # Subscribe to i3 events
     i3_process = subprocess.Popen(
@@ -477,8 +522,9 @@ def monitor_loop(rgb_control):
         while True:
             # Build list of file descriptors to monitor
             fds = [i3_process.stdout]
-            if inotify_process and inotify_process.poll() is None:
-                fds.append(inotify_process.stdout)
+            for proc, _ in inotify_processes:
+                if proc and proc.poll() is None:
+                    fds.append(proc.stdout)
 
             # Wait for events from either source
             readable, _, _ = select.select(fds, [], [], 1.0)
@@ -513,23 +559,36 @@ def monitor_loop(rgb_control):
                 except Exception as e:
                     log(f"Error processing i3 event: {e}", always=True)
 
-            # Check for file change events
-            if inotify_process and inotify_process.stdout in readable:
-                event_line = inotify_process.stdout.readline()
-                # Check if this event is for our workspace-status.json file
-                if event_line and "workspace-status.json" in event_line:
-                    log("Claude status file changed, updating LEDs...")
-                    previous_states, changed = update_leds(rgb_control, previous_states)
-                    if changed and not rgb_control.connected:
-                        rgb_control.connect()
-                        update_leds(rgb_control, {})
+            # Check for file change events from all inotify processes
+            for proc, filename in inotify_processes:
+                if proc and proc.stdout in readable:
+                    event_line = proc.stdout.readline()
+                    if event_line and filename in event_line:
+                        if filename == "workspace-status.json":
+                            log("Claude status file changed, updating LEDs...")
+                            previous_states, changed = update_leds(rgb_control, previous_states)
+                            if changed and not rgb_control.connected:
+                                rgb_control.connect()
+                                update_leds(rgb_control, {})
+                        elif filename == "keyboard-led-colours.json":
+                            log("🎨 Keyboard colors file changed, reloading colors...", always=True)
+                            reload_color_palette()
+                            # Force full LED update with new colors
+                            previous_states = {}  # Clear states to force refresh
+                            previous_states, changed = update_leds(rgb_control, previous_states)
+                            if changed:
+                                log("✓ Colors reloaded and LEDs updated successfully!", always=True)
+                            if not rgb_control.connected:
+                                rgb_control.connect()
+                                update_leds(rgb_control, {})
 
     except KeyboardInterrupt:
         log("\n✓ Stopping monitor...")
     finally:
         i3_process.terminate()
-        if inotify_process:
-            inotify_process.terminate()
+        for proc, _ in inotify_processes:
+            if proc:
+                proc.terminate()
 
 
 def signal_handler(signum, frame):
