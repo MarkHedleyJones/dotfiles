@@ -132,7 +132,7 @@ def rebuild_colors():
     """Rebuild the COLORS dictionary from the current COLOR_PALETTE"""
     global COLORS
     COLORS = {}
-    
+
     # For each state, create unfocused (dim) and focused (bright) versions
     for state, color_name in STATE_COLOR_MAP.items():
         # Unfocused = dim version
@@ -142,7 +142,7 @@ def rebuild_colors():
         # Focused = bright version
         rgb_bright = get_color_rgb(color_name, "bright")
         COLORS[f"{state}_focused"] = tuple(rgb_bright)
-    
+
     log(f"✓ Rebuilt color mappings from {len(COLOR_PALETTE)} colors")
 
 
@@ -151,7 +151,10 @@ def reload_color_palette():
     global COLOR_PALETTE
     COLOR_PALETTE = load_color_palette()
     rebuild_colors()
-    log(f"✓ Reloaded {len(COLOR_PALETTE)} colors from keyboard-led-colours.json", always=True)
+    log(
+        f"✓ Reloaded {len(COLOR_PALETTE)} colors from keyboard-led-colours.json",
+        always=True,
+    )
 
 
 # Initial build of colors
@@ -453,14 +456,16 @@ def get_color_circle(r, g, b):
 
 def monitor_loop(rgb_control):
     """Main monitoring loop using i3-msg subscribe and inotify file monitoring"""
-    log("Monitoring i3 workspaces, Claude status, and keyboard colors... (Ctrl+C to exit)")
+    log(
+        "Monitoring i3 workspaces, Claude status, and keyboard colors... (Ctrl+C to exit)"
+    )
 
     # Set initial state
     previous_states, _ = update_leds(rgb_control)
 
     # Set up file watching for Claude status file
     status_file = Path.home() / ".claude" / "workspace-status.json"
-    
+
     # Set up file watching for keyboard colors file
     # Follow symlink to watch the actual file location
     colors_file = Path.home() / ".config" / "keyboard" / "keyboard-led-colours.json"
@@ -470,7 +475,7 @@ def monitor_loop(rgb_control):
 
     # Start inotify processes to watch both files
     inotify_processes = []
-    
+
     # Watch Claude status file
     if status_file.exists():
         # Use inotifywait to monitor the specific file for modifications
@@ -489,7 +494,7 @@ def monitor_loop(rgb_control):
         )
         inotify_processes.append((status_inotify, "workspace-status.json"))
         log(f"Watching {status_file} for changes")
-    
+
     # Watch keyboard colors file
     if colors_file.exists():
         colors_inotify = subprocess.Popen(
@@ -566,18 +571,28 @@ def monitor_loop(rgb_control):
                     if event_line and filename in event_line:
                         if filename == "workspace-status.json":
                             log("Claude status file changed, updating LEDs...")
-                            previous_states, changed = update_leds(rgb_control, previous_states)
+                            previous_states, changed = update_leds(
+                                rgb_control, previous_states
+                            )
                             if changed and not rgb_control.connected:
                                 rgb_control.connect()
                                 update_leds(rgb_control, {})
                         elif filename == "keyboard-led-colours.json":
-                            log("🎨 Keyboard colors file changed, reloading colors...", always=True)
+                            log(
+                                "🎨 Keyboard colors file changed, reloading colors...",
+                                always=True,
+                            )
                             reload_color_palette()
                             # Force full LED update with new colors
                             previous_states = {}  # Clear states to force refresh
-                            previous_states, changed = update_leds(rgb_control, previous_states)
+                            previous_states, changed = update_leds(
+                                rgb_control, previous_states
+                            )
                             if changed:
-                                log("✓ Colors reloaded and LEDs updated successfully!", always=True)
+                                log(
+                                    "✓ Colors reloaded and LEDs updated successfully!",
+                                    always=True,
+                                )
                             if not rgb_control.connected:
                                 rgb_control.connect()
                                 update_leds(rgb_control, {})
