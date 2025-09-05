@@ -1,0 +1,348 @@
+#!/usr/bin/env python3
+"""
+Interactive color calibration tool for Voyager keyboard.
+Uses the keyboard itself as the interface for adjusting RGB values.
+"""
+
+import json
+import os
+import sys
+import time
+import termios
+import tty
+import select
+from pathlib import Path
+import grpc
+import threading
+import shutil
+
+# Add lib directory to path for keymapp modules
+real_script_path = Path(os.path.realpath(__file__))
+dotfiles_dir = real_script_path.parent.parent
+lib_dir = dotfiles_dir / "lib"
+sys.path.insert(0, str(lib_dir))
+
+try:
+    import keymapp_pb2
+    import keymapp_pb2_grpc
+except ImportError as e:
+    print("Error: Cannot import keymapp modules")
+    print("Please install grpcio: sudo apt install python3-grpcio")
+    sys.exit(1)
+
+
+class KeyboardInput:
+    """Handle keyboard input without blocking"""
+    
+    def __init__(self):
+        self.old_settings = termios.tcgetattr(sys.stdin)
+        tty.setcbreak(sys.stdin.fileno())
+    
+    def get_key(self, timeout=0.1):
+        """Get a key press with timeout"""
+        if select.select([sys.stdin], [], [], timeout)[0]:
+            return sys.stdin.read(1)
+        return None
+    
+    def cleanup(self):
+        """Restore terminal settings"""
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
+
+
+class VoyagerColorCalibrator:
+    def __init__(self):
+        self.channel = None
+        self.stub = None
+        self.connected = False
+        self.colors = {}
+        self.original_colors = {}
+        self.layout = None
+        self.current_color_index = 0
+        self.color_names = []
+        self.modified = False
+        self.kb_input = None
+        
+        # Control key LED indices (left keyboard, column 0)
+        self.SAVE_EXIT_KEY = 0     # Row 0, Col 0 (ESC position)
+        self.INCREASE_KEY = 6      # Row 1, Col 0 (TAB position)
+        self.DECREASE_KEY = 12     # Row 2, Col 0 (CAPS position)
+        self.NEXT_KEY = 18         # Row 3, Col 0 (SHIFT position)
+        
+        # RGB component keys (columns 1-5, rows 1-3)
+        self.RGB_KEYS = {
+            'r': [7, 8, 9, 10, 11],    # Row 1, Cols 1-5 (Q,W,E,R,T)
+            'g': [13, 14, 15, 16, 17],  # Row 2, Cols 1-5 (A,S,D,F,G)
+            'b': [19, 20, 21, 22, 23]   # Row 3, Cols 1-5 (Z,X,C,V,B)
+        }
+        
+        # Color display keys (top row, columns 1-5)
+        self.COLOR_DISPLAY_KEYS = [1, 2, 3, 4, 5]  # F1-F5 keys
+        
+        # State tracking
+        self.held_keys = set()
+        self.key_press_times = {}
+        self.adjustment_speed = 5  # RGB units per adjustment
+    
+    def connect(self):
+        """Connect to Keymapp gRPC service"""
+        socket_paths = [
+            os.path.expanduser("~/.config/.keymapp/keymapp.sock"),
+            "/tmp/keymapp.sock",
+            os.path.expanduser("~/.keymapp/keymapp.sock"),
+        ]
+        
+        for socket_path in socket_paths:
+            if os.path.exists(socket_path):
+                try:
+                    self.channel = grpc.insecure_channel(f"unix://{socket_path}")
+                    self.stub = keymapp_pb2_grpc.KeyboardServiceStub(self.channel)
+                    
+                    status = self.stub.GetStatus(keymapp_pb2.GetStatusRequest())
+                    if status.connected_keyboard.friendly_name:
+                        self.connected = True
+                        print(f"✓ Connected to {status.connected_keyboard.friendly_name}")
+                        return True
+                    
+                    reply = self.stub.ConnectAnyKeyboard(keymapp_pb2.ConnectAnyKeyboardRequest())
+                    if reply.success:
+                        self.connected = True
+                        print(f"✓ Connected to Voyager keyboard")
+                        return True
+                except:
+                    continue
+        
+        print("✗ Cannot connect to Keymapp")
+        return False
+    
+    def load_colors(self):
+        """Load current colors from keyboard-led-colours.json"""
+        colors_file = Path.home() / ".config" / "keyboard" / "keyboard-led-colours.json"
+        if colors_file.exists():
+            with open(colors_file, 'r') as f:
+                self.colors = json.load(f)
+                self.original_colors = json.loads(json.dumps(self.colors))  # Deep copy
+                self.color_names = list(self.colors.keys())
+                print(f"✓ Loaded {len(self.colors)} colors from {colors_file}")
+        else:
+            print(f"✗ Color file not found: {colors_file}")
+            return False
+        return True
+    
+    def load_layout(self):
+        """Load keyboard layout mapping"""
+        layout_file = Path(__file__).parent / "voyager-layout.json"
+        if layout_file.exists():
+            with open(layout_file, 'r') as f:
+                self.layout = json.load(f)
+                print(f"✓ Loaded keyboard layout from {layout_file}")
+        else:
+            print(f"✗ Layout file not found: {layout_file}")
+            return False
+        return True
+    
+    def save_colors(self):
+        """Save colors back to keyboard-led-colours.json"""
+        colors_file = Path.home() / ".config" / "keyboard" / "keyboard-led-colours.json"
+        
+        # Create backup
+        backup_file = colors_file.with_suffix('.json.bak')
+        if colors_file.exists():
+            shutil.copy2(colors_file, backup_file)
+            print(f"✓ Created backup: {backup_file}")
+        
+        # Save colors
+        with open(colors_file, 'w') as f:
+            json.dump(self.colors, f, indent=2)
+        
+        print(f"✓ Saved colors to {colors_file}")
+        self.modified = False
+    
+    def set_led(self, led_index, r, g, b):
+        """Set LED color"""
+        if not self.connected:
+            return False
+        try:
+            # Clamp values to 0-255
+            r = max(0, min(255, r))
+            g = max(0, min(255, g))
+            b = max(0, min(255, b))
+            
+            request = keymapp_pb2.SetRGBLedRequest(
+                led=led_index, red=r, green=g, blue=b, sustain=0
+            )
+            reply = self.stub.SetRGBLed(request)
+            return reply.success
+        except:
+            return False
+    
+    def clear_all_leds(self):
+        """Turn off all LEDs"""
+        for i in range(52):
+            self.set_led(i, 0, 0, 0)
+    
+    def update_display(self):
+        """Update the keyboard LED display"""
+        # Clear all LEDs first
+        self.clear_all_leds()
+        
+        # Set control key LEDs
+        self.set_led(self.SAVE_EXIT_KEY, 0, 100, 0)    # Green for save/exit
+        self.set_led(self.INCREASE_KEY, 100, 100, 100)  # White for increase
+        self.set_led(self.DECREASE_KEY, 50, 50, 50)     # Dim white for decrease
+        self.set_led(self.NEXT_KEY, 0, 0, 100)          # Blue for next
+        
+        # Display current colors (up to 5 at a time)
+        start_idx = self.current_color_index
+        end_idx = min(start_idx + 5, len(self.color_names))
+        
+        for i, color_idx in enumerate(range(start_idx, end_idx)):
+            color_name = self.color_names[color_idx]
+            r, g, b = self.colors[color_name]
+            
+            # Show color on top row
+            self.set_led(self.COLOR_DISPLAY_KEYS[i], r, g, b)
+            
+            # Show RGB component keys for this color
+            self.set_led(self.RGB_KEYS['r'][i], min(255, r + 50), 0, 0)  # Red
+            self.set_led(self.RGB_KEYS['g'][i], 0, min(255, g + 50), 0)  # Green
+            self.set_led(self.RGB_KEYS['b'][i], 0, 0, min(255, b + 50))  # Blue
+    
+    def handle_adjustment(self, color_slot, component, increase):
+        """Handle color adjustment"""
+        color_idx = self.current_color_index + color_slot
+        if color_idx >= len(self.color_names):
+            return
+        
+        color_name = self.color_names[color_idx]
+        current_rgb = self.colors[color_name]
+        
+        # Determine which component to adjust
+        component_idx = {'r': 0, 'g': 1, 'b': 2}[component]
+        
+        # Adjust value
+        if increase:
+            current_rgb[component_idx] = min(255, current_rgb[component_idx] + self.adjustment_speed)
+        else:
+            current_rgb[component_idx] = max(0, current_rgb[component_idx] - self.adjustment_speed)
+        
+        self.modified = True
+        self.update_display()
+        
+        # Print feedback
+        print(f"\r{color_name}: RGB({current_rgb[0]}, {current_rgb[1]}, {current_rgb[2]})    ", end='', flush=True)
+    
+    def simulate_key_events(self):
+        """Simulate key events for testing"""
+        # This is a simplified version - in reality you'd use evdev or similar
+        # to capture actual keyboard events
+        
+        print("\n" + "="*60)
+        print("KEYBOARD COLOR CALIBRATION")
+        print("="*60)
+        print("\nControls (using keyboard keys):")
+        print("  • Hold R/G/B key + tap increase/decrease to adjust")
+        print("  • Tap NEXT (blue) to cycle through colors")
+        print("  • Hold SAVE (green) to save, tap to exit without saving")
+        print("\nTerminal controls (for testing):")
+        print("  • 1-5: Select color slot")
+        print("  • r/g/b: Select component")
+        print("  • +/-: Increase/decrease value")
+        print("  • n: Next set of colors")
+        print("  • s: Save and exit")
+        print("  • q: Quit without saving")
+        print("\n" + "-"*60)
+        
+        self.kb_input = KeyboardInput()
+        selected_slot = 0
+        selected_component = 'r'
+        
+        try:
+            while True:
+                key = self.kb_input.get_key()
+                
+                if key:
+                    if key == 'q':
+                        print("\nExiting without saving...")
+                        break
+                    elif key == 's':
+                        print("\nSaving colors...")
+                        self.save_colors()
+                        break
+                    elif key == 'n':
+                        # Next set of colors
+                        self.current_color_index = (self.current_color_index + 5) % len(self.color_names)
+                        self.update_display()
+                        print(f"\nShowing colors {self.current_color_index + 1}-{min(self.current_color_index + 5, len(self.color_names))}")
+                    elif key in '12345':
+                        selected_slot = int(key) - 1
+                        color_idx = self.current_color_index + selected_slot
+                        if color_idx < len(self.color_names):
+                            print(f"\nSelected: {self.color_names[color_idx]}")
+                    elif key in 'rgb':
+                        selected_component = key
+                        print(f"\nComponent: {selected_component.upper()}")
+                    elif key == '+':
+                        self.handle_adjustment(selected_slot, selected_component, True)
+                    elif key == '-':
+                        self.handle_adjustment(selected_slot, selected_component, False)
+                    elif key == '?':
+                        # Show current colors
+                        print("\n\nCurrent colors:")
+                        for i in range(5):
+                            color_idx = self.current_color_index + i
+                            if color_idx < len(self.color_names):
+                                name = self.color_names[color_idx]
+                                rgb = self.colors[name]
+                                print(f"  {i+1}. {name}: RGB({rgb[0]}, {rgb[1]}, {rgb[2]})")
+        
+        except KeyboardInterrupt:
+            print("\n\nInterrupted")
+        finally:
+            if self.kb_input:
+                self.kb_input.cleanup()
+    
+    def run(self):
+        """Main calibration loop"""
+        if not self.load_colors():
+            return 1
+        
+        if not self.load_layout():
+            return 1
+        
+        # Initial display
+        self.update_display()
+        
+        # Run the calibration interface
+        self.simulate_key_events()
+        
+        # Check for unsaved changes
+        if self.modified:
+            print("\nYou have unsaved changes.")
+            response = input("Save before exiting? (y/n): ")
+            if response.lower() == 'y':
+                self.save_colors()
+        
+        return 0
+    
+    def cleanup(self):
+        """Clean up resources"""
+        self.clear_all_leds()
+        if self.channel:
+            self.channel.close()
+
+
+def main():
+    calibrator = VoyagerColorCalibrator()
+    
+    if not calibrator.connect():
+        print("Failed to connect to keyboard")
+        return 1
+    
+    try:
+        return calibrator.run()
+    finally:
+        calibrator.cleanup()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

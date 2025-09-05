@@ -1,0 +1,494 @@
+#!/usr/bin/env python3
+"""
+LED mapping discovery tool for Voyager keyboard.
+Lights up LEDs one by one and captures the keycode when pressed.
+"""
+
+import json
+import os
+import sys
+import time
+from pathlib import Path
+import grpc
+import subprocess
+import threading
+import select
+
+# Add lib directory to path for keymapp modules
+real_script_path = Path(os.path.realpath(__file__))
+dotfiles_dir = real_script_path.parent.parent
+lib_dir = dotfiles_dir / "lib"
+sys.path.insert(0, str(lib_dir))
+
+try:
+    import keymapp_pb2
+    import keymapp_pb2_grpc
+except ImportError as e:
+    print("Error: Cannot import keymapp modules")
+    print("Please install grpcio: sudo apt install python3-grpcio")
+    sys.exit(1)
+
+try:
+    from evdev import InputDevice, categorize, ecodes
+    EVDEV_AVAILABLE = True
+except ImportError:
+    EVDEV_AVAILABLE = False
+    print("Warning: python3-evdev not installed. Using xinput instead.")
+    print("For better results: sudo apt install python3-evdev")
+
+
+class VoyagerLEDMapper:
+    def __init__(self):
+        self.channel = None
+        self.stub = None
+        self.connected = False
+        
+    def connect(self):
+        """Connect to Keymapp gRPC service"""
+        socket_paths = [
+            os.path.expanduser("~/.config/.keymapp/keymapp.sock"),
+            "/tmp/keymapp.sock",
+            os.path.expanduser("~/.keymapp/keymapp.sock"),
+        ]
+        
+        for socket_path in socket_paths:
+            if os.path.exists(socket_path):
+                try:
+                    self.channel = grpc.insecure_channel(f"unix://{socket_path}")
+                    self.stub = keymapp_pb2_grpc.KeyboardServiceStub(self.channel)
+                    
+                    status = self.stub.GetStatus(keymapp_pb2.GetStatusRequest())
+                    if status.connected_keyboard.friendly_name:
+                        self.connected = True
+                        print(f"✓ Connected to {status.connected_keyboard.friendly_name}")
+                        return True
+                    
+                    reply = self.stub.ConnectAnyKeyboard(keymapp_pb2.ConnectAnyKeyboardRequest())
+                    if reply.success:
+                        self.connected = True
+                        print(f"✓ Connected to Voyager keyboard")
+                        return True
+                except:
+                    continue
+        
+        print("✗ Cannot connect to Keymapp")
+        return False
+    
+    def set_led(self, led_index, r, g, b):
+        """Set LED color"""
+        if not self.connected:
+            return False
+        try:
+            request = keymapp_pb2.SetRGBLedRequest(
+                led=led_index, red=r, green=g, blue=b, sustain=0
+            )
+            reply = self.stub.SetRGBLed(request)
+            return reply.success
+        except:
+            return False
+    
+    def clear_all_leds(self):
+        """Turn off all LEDs"""
+        for i in range(52):  # Voyager has 52 keys
+            self.set_led(i, 0, 0, 0)
+    
+    def find_keyboard_device(self):
+        """Find the Voyager keyboard device"""
+        if EVDEV_AVAILABLE:
+            # Try to find Voyager keyboard using evdev
+            from evdev import list_devices
+            for device_path in list_devices():
+                try:
+                    device = InputDevice(device_path)
+                    if 'voyager' in device.name.lower() or 'zsa' in device.name.lower():
+                        print(f"✓ Found Voyager keyboard: {device.name}")
+                        return device
+                except:
+                    continue
+            
+            # If not found, list all devices and let user choose
+            devices = [InputDevice(path) for path in list_devices()]
+            print("\nAvailable input devices:")
+            for i, device in enumerate(devices):
+                print(f"  {i}: {device.name} ({device.path})")
+            
+            choice = input("\nSelect keyboard device number: ")
+            try:
+                return devices[int(choice)]
+            except:
+                print("Invalid selection")
+                return None
+        else:
+            print("✗ python3-evdev is required for accurate mapping")
+            print("  Install with: sudo apt install python3-evdev")
+            return None
+    
+    def capture_keypress_evdev(self, device, timeout=5):
+        """Capture a keypress using evdev (returns keycode)"""
+        from evdev import categorize, ecodes
+        
+        print("Press the lit key...")
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            try:
+                # Check for events with timeout
+                r, w, x = select.select([device], [], [], 0.1)
+                if r:
+                    for event in device.read():
+                        if event.type == ecodes.EV_KEY and event.value == 1:  # Key press
+                            keycode = event.code
+                            # Try to get key name
+                            try:
+                                keyname = ecodes.KEY[keycode]
+                            except:
+                                keyname = f"KEY_{keycode}"
+                            return keycode, keyname
+            except:
+                continue
+        
+        return None, None
+    
+    def capture_keypress_xinput(self, timeout=5):
+        """Capture a keypress using xinput (fallback method)"""
+        print("Press the lit key...")
+        
+        # Start xinput test in background
+        proc = subprocess.Popen(
+            ["xinput", "test-xi2", "--root"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True
+        )
+        
+        start_time = time.time()
+        keycode = None
+        
+        try:
+            while time.time() - start_time < timeout:
+                # Check if there's output
+                if proc.poll() is None:
+                    # Read lines with timeout
+                    line = proc.stdout.readline()
+                    if line and "RawKeyPress" in line:
+                        # Next line should have the detail (keycode)
+                        for _ in range(10):  # Look for detail in next few lines
+                            line = proc.stdout.readline()
+                            if "detail:" in line:
+                                keycode = int(line.split("detail:")[1].strip())
+                                break
+                        if keycode:
+                            break
+        finally:
+            proc.terminate()
+            proc.wait()
+        
+        if keycode:
+            # Get keysym using xmodmap
+            try:
+                result = subprocess.run(
+                    ["xmodmap", "-pke"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                for line in result.stdout.split('\n'):
+                    if f"keycode {keycode:3d}" in line:
+                        # Extract first keysym
+                        parts = line.split('=')[1].strip().split()
+                        if parts:
+                            return keycode, parts[0]
+            except:
+                pass
+            
+            return keycode, f"keycode_{keycode}"
+        
+        return None, None
+    
+    def map_leds(self):
+        """Automatic LED mapping process with exclusive keyboard grab"""
+        print("\n" + "="*50)
+        print("VOYAGER LED MAPPING TOOL")
+        print("="*50)
+        print("\nThis tool will light up each LED one by one.")
+        print("Simply press the key that's lit to map it.")
+        print("The tool will automatically capture the keycode.\n")
+        
+        if not EVDEV_AVAILABLE:
+            print("✗ python3-evdev is required for this tool")
+            print("  Install with: sudo apt install python3-evdev")
+            return {}
+        
+        # Find keyboard device
+        device = self.find_keyboard_device()
+        if not device:
+            print("✗ Could not find keyboard device")
+            return {}
+        
+        print("\n" + "⚠"*30)
+        print("⚠ EXCLUSIVE KEYBOARD GRAB STARTING ⚠")
+        print("⚠"*30)
+        print("\nKeyboard shortcuts will be DISABLED during mapping.")
+        print("LED 0 (ESC key) is mapped first - you can press it 3 times to abort later.")
+        print("\nStarting in 3 seconds...")
+        time.sleep(3)
+        
+        # Grab exclusive access to the keyboard
+        try:
+            device.grab()
+            print("✓ Exclusive keyboard access granted")
+            print("  All keyboard input is now captured by this tool\n")
+        except Exception as e:
+            print(f"✗ Could not grab exclusive keyboard access: {e}")
+            print("  You may need to run this tool with sudo")
+            return {}
+        
+        mapping = {}
+        abort = False
+        escape_keycode = None  # We'll learn this from LED 0
+        
+        try:
+            print("Starting LED mapping...\n")
+            
+            # Clear any pending key events first
+            try:
+                device.read_one()  # Flush any buffered events (non-blocking)
+                while device.read_one():
+                    pass  # Keep flushing
+            except:
+                pass  # No events to flush
+            
+            for led_id in range(52):
+                if abort:
+                    break
+                
+                self.clear_all_leds()
+                
+                # Light up current LED in white
+                self.set_led(led_id, 100, 100, 100)
+                
+                print(f"🔦 LED {led_id:2d} is lit (white)")
+                
+                # Capture keypress
+                if escape_keycode is None:
+                    # First key, no abort mechanism yet
+                    keycode, keyname = self.capture_keypress_simple(device, timeout=5)
+                    if led_id == 0 and keycode:
+                        escape_keycode = keycode
+                        print(f"   ℹ️  ESC key detected (keycode {keycode}). Press it 3 times quickly to abort.")
+                else:
+                    # We know escape key, can detect abort
+                    keycode, keyname = self.capture_keypress_with_escape(device, escape_keycode, timeout=5)
+                    if keycode == -1:  # Abort signal
+                        print("\n⚠ Aborting mapping...")
+                        abort = True
+                        break
+                
+                if keycode and keycode != -1:
+                    mapping[led_id] = {
+                        "keycode": keycode,
+                        "keyname": keyname
+                    }
+                    print(f"   ✓ Mapped LED {led_id} → {keyname} (keycode {keycode})")
+                elif keycode != -1:
+                    print(f"   ✗ No key pressed, skipping LED {led_id}")
+        
+        finally:
+            # Always release the keyboard grab
+            try:
+                device.ungrab()
+                print("\n✓ Keyboard control released")
+            except:
+                pass
+            
+            self.clear_all_leds()
+        
+        # Save mapping if we collected any data
+        if mapping and not abort:
+            output_file = Path.home() / ".config" / "keyboard" / "led-keycode-mapping.json"
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_file, 'w') as f:
+                json.dump(mapping, f, indent=2)
+            print(f"\n✓ Mapping saved to: {output_file}")
+            print(f"✓ Mapped {len(mapping)} LEDs to keycodes")
+        
+        return mapping
+    
+    def wait_for_key_release(self, device, keycode, timeout=1):
+        """Wait for a specific key to be released"""
+        from evdev import ecodes
+        
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                r, w, x = select.select([device], [], [], 0.01)
+                if r:
+                    for event in device.read():
+                        if event.type == ecodes.EV_KEY and event.code == keycode and event.value == 0:
+                            # Key released, flush any remaining events
+                            try:
+                                while device.read_one():
+                                    pass
+                            except:
+                                pass
+                            return True
+            except:
+                continue
+        return False
+    
+    def capture_keypress_simple(self, device, timeout=5):
+        """Simple keypress capture without abort mechanism"""
+        from evdev import categorize, ecodes
+        
+        print("  Press the lit key...")
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            try:
+                r, w, x = select.select([device], [], [], 0.1)
+                if r:
+                    for event in device.read():
+                        if event.type == ecodes.EV_KEY and event.value == 1:  # Key press
+                            keycode = event.code
+                            try:
+                                keyname = ecodes.KEY[keycode]
+                            except:
+                                keyname = f"KEY_{keycode}"
+                            
+                            # Wait for key release
+                            self.wait_for_key_release(device, keycode)
+                            return keycode, keyname
+            except:
+                continue
+        
+        return None, None
+    
+    def capture_keypress_with_escape(self, device, escape_keycode, timeout=5):
+        """Capture keypress with triple-ESC abort detection"""
+        from evdev import categorize, ecodes
+        
+        print("  Press the lit key (or press ESC 3 times to abort)...")
+        start_time = time.time()
+        escape_count = 0
+        last_escape_time = 0
+        
+        while time.time() - start_time < timeout:
+            try:
+                r, w, x = select.select([device], [], [], 0.1)
+                if r:
+                    for event in device.read():
+                        if event.type == ecodes.EV_KEY and event.value == 1:  # Key press
+                            keycode = event.code
+                            
+                            # Check for escape key
+                            if keycode == escape_keycode:
+                                current_time = time.time()
+                                if current_time - last_escape_time < 1.0:  # Within 1 second
+                                    escape_count += 1
+                                    if escape_count >= 3:
+                                        return -1, None  # Abort signal
+                                else:
+                                    escape_count = 1
+                                last_escape_time = current_time
+                            else:
+                                # Different key pressed, return it
+                                escape_count = 0
+                                try:
+                                    keyname = ecodes.KEY[keycode]
+                                except:
+                                    keyname = f"KEY_{keycode}"
+                                
+                                # Wait for key release
+                                self.wait_for_key_release(device, keycode)
+                                return keycode, keyname
+            except:
+                continue
+        
+        return None, None
+    
+    def capture_keypress_with_abort(self, device, timeout=5):
+        """Capture a keypress with ESC abort detection"""
+        from evdev import categorize, ecodes
+        
+        print("  Press the lit key (or hold ESC to abort)...")
+        start_time = time.time()
+        esc_held_start = None
+        
+        while time.time() - start_time < timeout:
+            try:
+                # Check for events with timeout
+                r, w, x = select.select([device], [], [], 0.1)
+                if r:
+                    for event in device.read():
+                        if event.type == ecodes.EV_KEY:
+                            # Check for ESC key
+                            if event.code == ecodes.KEY_ESC:
+                                if event.value == 1:  # Key down
+                                    esc_held_start = time.time()
+                                elif event.value == 0:  # Key up
+                                    esc_held_start = None
+                            elif event.value == 1:  # Other key pressed
+                                keycode = event.code
+                                try:
+                                    keyname = ecodes.KEY[keycode]
+                                except:
+                                    keyname = f"KEY_{keycode}"
+                                return keycode, keyname
+                
+                # Check if ESC has been held for 2 seconds
+                if esc_held_start and time.time() - esc_held_start > 2:
+                    return -1, None  # Abort signal
+            except:
+                continue
+        
+        return None, None
+    
+    def test_pattern(self):
+        """Test pattern to verify LED control"""
+        print("\n🌈 Running test pattern...")
+        colors = [
+            (255, 0, 0),    # Red
+            (0, 255, 0),    # Green
+            (0, 0, 255),    # Blue
+            (255, 255, 0),  # Yellow
+            (255, 0, 255),  # Magenta
+            (0, 255, 255),  # Cyan
+        ]
+        
+        # Wave pattern across all LEDs
+        for color_idx, (r, g, b) in enumerate(colors):
+            for led_id in range(52):
+                self.set_led(led_id, r//4, g//4, b//4)  # Dim version
+                time.sleep(0.02)
+            time.sleep(0.2)
+        
+        self.clear_all_leds()
+        print("✓ Test pattern complete")
+    
+    def cleanup(self):
+        """Clean up connection"""
+        self.clear_all_leds()
+        if self.channel:
+            self.channel.close()
+
+
+def main():
+    mapper = VoyagerLEDMapper()
+    
+    if not mapper.connect():
+        print("Failed to connect to keyboard")
+        return 1
+    
+    try:
+        # Go straight to mapping
+        mapper.map_leds()
+    except KeyboardInterrupt:
+        print("\n\nInterrupted")
+    finally:
+        mapper.cleanup()
+    
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
