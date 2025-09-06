@@ -12,3 +12,6 @@ lib/__pycache__/
 
 # Claude configuration
 CLAUDE.md
+
+# Workspace status file (changes frequently, runtime state)
+i3/workspace-status.json
