@@ -1,0 +1,183 @@
+#!/bin/bash
+#
+# Long-running command wrapper that updates workspace status
+# Usage: 
+#   long <command> [args...]  - Run command with status tracking
+#   long --clear              - Clear task status for current workspace
+#
+# Sets workspace status to:
+#   - task-running while command executes
+#   - task-complete if command succeeds (exit 0)
+#   - task-failed if command fails (non-zero exit)
+
+# Exit if TERMINAL_WORKSPACE is not set
+if [ -z "$TERMINAL_WORKSPACE" ]; then
+    echo "Error: TERMINAL_WORKSPACE not set. This command must be run from within i3." >&2
+    exit 1
+fi
+
+# Status file location
+STATUS_FILE=~/.config/i3/workspace-status.json
+
+# Function to add a status to workspace array
+add_status() {
+    local new_status="$1"
+    local ws="$TERMINAL_WORKSPACE"
+    
+    # Ensure directory exists
+    mkdir -p ~/.config/i3
+    
+    # Create file with empty workspaces if it doesn't exist
+    if [ ! -f "$STATUS_FILE" ]; then
+        echo '{
+  "1": ["empty"],
+  "2": ["empty"],
+  "3": ["empty"],
+  "4": ["empty"],
+  "5": ["empty"],
+  "6": ["empty"],
+  "7": ["empty"],
+  "8": ["empty"],
+  "9": ["empty"],
+  "10": ["empty"]
+}' > "$STATUS_FILE"
+    fi
+    
+    # Add status to workspace array
+    TEMP_FILE="/tmp/long-status-$$"
+    jq --arg ws "$ws" --arg status "$new_status" '
+      # Ensure all 10 workspaces exist as arrays
+      . as $current |
+      (["1","2","3","4","5","6","7","8","9","10"] | 
+       map({key: ., value: (
+         if $current[.] == null then ["empty"]
+         elif $current[.] | type == "array" then $current[.]
+         else [$current[.]]
+         end
+       )}) | 
+       from_entries) |
+      # Add new status to workspace array if not already present
+      .[$ws] = (
+        (.[$ws] // ["occupied"]) as $states |
+        if ($status | IN($states[])) then $states
+        else $states + [$status]
+        end
+      ) |
+      # Sort by numeric key
+      to_entries | sort_by(.key | tonumber) | from_entries
+    ' "$STATUS_FILE" > "$TEMP_FILE" && mv "$TEMP_FILE" "$STATUS_FILE"
+}
+
+# Function to remove a status from workspace array
+remove_status() {
+    local status_to_remove="$1"
+    local ws="$TERMINAL_WORKSPACE"
+    
+    # Update status file
+    TEMP_FILE="/tmp/long-status-$$"
+    jq --arg ws "$ws" --arg status "$status_to_remove" '
+      # Remove specified status from workspace array
+      .[$ws] = (
+        (.[$ws] // ["occupied"]) as $states |
+        if $states | type == "array" then
+          [$states[] | select(. != $status)] as $new_states |
+          if ($new_states | length) == 0 then ["occupied"]
+          else $new_states
+          end
+        else
+          ["occupied"]
+        end
+      )
+    ' "$STATUS_FILE" > "$TEMP_FILE" && mv "$TEMP_FILE" "$STATUS_FILE"
+}
+
+# Handle --clear flag
+if [ "$1" = "--clear" ]; then
+    # Remove all task-related states
+    remove_status "task-running"
+    remove_status "task-complete"
+    remove_status "task-failed"
+    echo "Cleared task status for workspace $TERMINAL_WORKSPACE"
+    exit 0
+fi
+
+# Check if command was provided
+if [ $# -eq 0 ]; then
+    echo "Usage: long <command> [args...]" >&2
+    echo "       long --clear" >&2
+    exit 1
+fi
+
+# Store the command for display
+COMMAND="$*"
+
+# Get start time
+START_TIME=$(date +%s)
+START_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Remove any existing task states first
+remove_status "task-complete"
+remove_status "task-failed"
+
+# Set status to task-running
+add_status "task-running"
+
+# Show what we're running with timing info
+echo "🏃 Running: $COMMAND"
+echo "📍 Workspace: $TERMINAL_WORKSPACE"
+echo "🕐 Started: $START_DATE"
+echo ""
+
+# Run the command, preserving all arguments and output
+"$@"
+EXIT_CODE=$?
+
+# Get end time and calculate duration
+END_TIME=$(date +%s)
+END_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+DURATION=$((END_TIME - START_TIME))
+
+# Format duration nicely
+if [ $DURATION -lt 60 ]; then
+    DURATION_STR="${DURATION}s"
+elif [ $DURATION -lt 3600 ]; then
+    MINUTES=$((DURATION / 60))
+    SECONDS=$((DURATION % 60))
+    DURATION_STR="${MINUTES}m ${SECONDS}s"
+else
+    HOURS=$((DURATION / 3600))
+    MINUTES=$(((DURATION % 3600) / 60))
+    SECONDS=$((DURATION % 60))
+    DURATION_STR="${HOURS}h ${MINUTES}m ${SECONDS}s"
+fi
+
+# Remove task-running status
+remove_status "task-running"
+
+# Update status based on exit code
+if [ $EXIT_CODE -eq 0 ]; then
+    add_status "task-complete"
+    echo ""
+    echo "✅ Command completed successfully (exit code: 0)"
+    echo "🕑 Finished: $END_DATE"
+    echo "⏱️  Duration: $DURATION_STR"
+    
+    # Send notification if available (include duration)
+    if command -v notify >/dev/null 2>&1; then
+        notify "✅ Task complete on workspace $TERMINAL_WORKSPACE after $DURATION_STR: $COMMAND"
+    fi
+else
+    add_status "task-failed"
+    echo ""
+    echo "❌ Command failed (exit code: $EXIT_CODE)"
+    echo "🕑 Finished: $END_DATE"
+    echo "⏱️  Duration: $DURATION_STR"
+    
+    # Send notification if available (include duration)
+    if command -v notify >/dev/null 2>&1; then
+        notify "❌ Task failed on workspace $TERMINAL_WORKSPACE (exit $EXIT_CODE) after $DURATION_STR: $COMMAND"
+    fi
+fi
+
+# Return the same exit code as the command
+exit $EXIT_CODE
