@@ -93,8 +93,11 @@ COLOR_PALETTE = load_color_palette()
 STATE_COLOR_MAP = {
     "empty": "off",  # No color (no windows)
     "occupied": "white",  # Normal white
-    "claude-ready": "green",  # Green for ready
-    "claude-busy": "yellow",  # Yellow for busy
+    "ai-ready": "green",  # Green for AI ready
+    "ai-busy": "yellow",  # Yellow for AI busy
+    "task-running": "yellow",  # Yellow/amber for running task
+    "task-complete": "blue",  # Blue for completed task
+    "task-failed": "red",  # Red for failed task
     "urgent": "red",  # Red for urgent
 }
 
@@ -309,6 +312,27 @@ class VoyagerRGBControl:
             self.channel.close()
 
 
+# Priority order for states (highest priority first)
+STATE_PRIORITY = [
+    "urgent",
+    "task-failed",
+    "ai-busy",
+    "task-running",
+    "task-complete",
+    "ai-ready",
+    "occupied",
+    "empty",
+]
+
+
+def resolve_state_priority(state):
+    """Resolve the priority of a state for display purposes"""
+    try:
+        return STATE_PRIORITY.index(state)
+    except ValueError:
+        return 999  # Unknown states get lowest priority
+
+
 def get_workspace_states_from_file():
     """Get workspace states from the status file"""
     states = {}
@@ -321,50 +345,228 @@ def get_workspace_states_from_file():
                 for ws in range(1, 11):
                     ws_str = str(ws)
                     if ws_str in data:
-                        status = data[ws_str]
-                        # Store the status directly (empty, occupied, claude-ready, claude-busy, urgent)
-                        if status:
-                            states[ws] = status
+                        ws_data = data[ws_str]
+
+                        # Handle both array format and legacy string format
+                        if isinstance(ws_data, list):
+                            # New array format - pick highest priority state
+                            if ws_data:
+                                # Convert any legacy claude-* states
+                                ws_data = [
+                                    (
+                                        "ai-ready"
+                                        if s == "claude-ready"
+                                        else "ai-busy" if s == "claude-busy" else s
+                                    )
+                                    for s in ws_data
+                                ]
+
+                                # Pick the highest priority state
+                                best_state = min(
+                                    ws_data, key=lambda s: resolve_state_priority(s)
+                                )
+                                states[ws] = best_state
+                            else:
+                                states[ws] = "empty"
                         else:
-                            states[ws] = "empty"
+                            # Legacy string format
+                            status = ws_data
+                            if status == "claude-ready":
+                                status = "ai-ready"
+                            elif status == "claude-busy":
+                                status = "ai-busy"
+
+                            if status:
+                                states[ws] = status
+                            else:
+                                states[ws] = "empty"
                     else:
                         states[ws] = "empty"
         except Exception:
             pass  # Ignore errors reading status
-    
+
     # Initialize missing workspaces as empty
     for ws in range(1, 11):
         if ws not in states:
             states[ws] = "empty"
-    
+
     return states
 
 
 def update_workspace_state_file(workspace_states):
-    """Update the workspace status file with current states"""
+    """Update the workspace status file with current states (as arrays)"""
     status_file = Path.home() / ".config" / "i3" / "workspace-status.json"
-    
+
     try:
         # Ensure directory exists
         status_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Write the states to file
+
+        # Read existing data to preserve array states
+        existing_data = {}
+        if status_file.exists():
+            try:
+                with open(status_file, "r") as f:
+                    existing_data = json.load(f)
+            except:
+                pass
+
+        # Build new data structure
         data = {}
         for ws in range(1, 11):
             ws_str = str(ws)
-            if ws in workspace_states:
-                data[ws_str] = workspace_states[ws]
+
+            # Get existing array of states for this workspace
+            existing_states = existing_data.get(ws_str, [])
+            if not isinstance(existing_states, list):
+                # Convert legacy string to array
+                existing_states = [existing_states] if existing_states else []
+
+            # Get the new base state (empty/occupied/urgent)
+            new_base_state = workspace_states.get(ws, "empty")
+
+            # Filter out old base states, keep special states (ai-*, task-*)
+            preserved_states = [
+                s
+                for s in existing_states
+                if s
+                in [
+                    "ai-ready",
+                    "ai-busy",
+                    "task-running",
+                    "task-complete",
+                    "task-failed",
+                ]
+            ]
+
+            # Build final state array
+            if new_base_state == "empty":
+                # Empty workspace clears all states
+                data[ws_str] = ["empty"]
             else:
-                data[ws_str] = "empty"
-        
+                # Combine base state with preserved special states
+                states_set = set([new_base_state] + preserved_states)
+                # Remove redundant "occupied" if we have special states
+                if len(states_set) > 1 and "occupied" in states_set:
+                    states_set.remove("occupied")
+                data[ws_str] = list(states_set)
+
         with open(status_file, "w") as f:
             json.dump(data, f, indent=2)
-        
+
         return True
-        
+
     except Exception as e:
         log(f"Error updating workspace status file: {e}", always=True)
         return False
+
+
+def update_focused_workspace(workspace_num):
+    """Update the focused state in the file - add to new workspace, remove from others
+    Also removes task-complete and task-failed from the newly focused workspace"""
+    status_file = Path.home() / ".config" / "i3" / "workspace-status.json"
+
+    try:
+        # Ensure directory exists
+        status_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Read existing data
+        data = {}
+        if status_file.exists():
+            with open(status_file, "r") as f:
+                data = json.load(f)
+
+        # Ensure all workspaces exist as arrays
+        for ws in range(1, 11):
+            ws_str = str(ws)
+            if ws_str not in data:
+                data[ws_str] = ["empty"]
+            elif not isinstance(data[ws_str], list):
+                # Convert legacy format
+                data[ws_str] = [data[ws_str]] if data[ws_str] else ["empty"]
+
+        # Remove "focused" from all workspaces
+        for ws_str in data:
+            if isinstance(data[ws_str], list) and "focused" in data[ws_str]:
+                data[ws_str].remove("focused")
+
+        # Handle the newly focused workspace
+        if workspace_num and 1 <= workspace_num <= 10:
+            ws_str = str(workspace_num)
+
+            # Remove completed task states from the newly focused workspace
+            task_states_to_clear = ["task-complete", "task-failed"]
+            cleared_states = []
+            for task_state in task_states_to_clear:
+                if task_state in data[ws_str]:
+                    data[ws_str].remove(task_state)
+                    cleared_states.append(task_state)
+
+            # Add "focused" to this workspace
+            if "focused" not in data[ws_str]:
+                data[ws_str].append("focused")
+
+            # Ensure we don't have an empty array
+            if not data[ws_str]:
+                data[ws_str] = ["occupied"]
+
+            log(f"  → Focus moved to workspace {workspace_num}")
+            if cleared_states:
+                log(
+                    f"  ✓ Cleared {', '.join(cleared_states)} from workspace {workspace_num}"
+                )
+
+        # Write back
+        with open(status_file, "w") as f:
+            json.dump(data, f, indent=2)
+
+        return True
+
+    except Exception as e:
+        log(f"Error updating focused workspace: {e}", always=True)
+        return False
+
+
+def remove_task_states_from_workspace(workspace_num):
+    """Remove all task-related states from a workspace when it gets focus"""
+    status_file = Path.home() / ".config" / "i3" / "workspace-status.json"
+
+    try:
+        if status_file.exists():
+            with open(status_file, "r") as f:
+                data = json.load(f)
+
+            ws_str = str(workspace_num)
+            if ws_str in data:
+                states = data[ws_str]
+
+                # Handle array format
+                if isinstance(states, list):
+                    # Remove only completed task states (not task-running since it's still active)
+                    task_states = ["task-complete", "task-failed"]
+                    removed_states = []
+
+                    for task_state in task_states:
+                        if task_state in states:
+                            states.remove(task_state)
+                            removed_states.append(task_state)
+
+                    if removed_states:
+                        # Ensure we don't have an empty array
+                        if not states:
+                            states = ["occupied"]
+                        data[ws_str] = states
+
+                        with open(status_file, "w") as f:
+                            json.dump(data, f, indent=2)
+
+                        log(
+                            f"  ✓ Cleared {', '.join(removed_states)} from workspace {workspace_num}"
+                        )
+                        return True
+    except Exception as e:
+        log(f"Error removing task states: {e}", always=True)
+
+    return False
 
 
 def sync_workspace_states_to_file():
@@ -378,7 +580,7 @@ def sync_workspace_states_to_file():
             check=True,
         )
         tree = json.loads(result.stdout)
-        
+
         # Get urgent workspaces
         ws_result = subprocess.run(
             ["i3-msg", "-t", "get_workspaces"],
@@ -387,12 +589,15 @@ def sync_workspace_states_to_file():
             check=True,
         )
         workspace_info = json.loads(ws_result.stdout)
-        urgent_workspaces = {int(ws["name"]): True for ws in workspace_info 
-                           if ws.get("urgent", False) and ws["name"].isdigit()}
-        
+        urgent_workspaces = {
+            int(ws["name"]): True
+            for ws in workspace_info
+            if ws.get("urgent", False) and ws["name"].isdigit()
+        }
+
         # Find which workspaces have windows
         workspaces_with_windows = set()
-        
+
         def find_workspaces(node):
             """Recursively find workspaces with windows"""
             if node.get("type") == "workspace" and node.get("name"):
@@ -402,85 +607,99 @@ def sync_workspace_states_to_file():
                         workspaces_with_windows.add(ws_num)
                 except (ValueError, KeyError):
                     pass
-            
+
             for child in node.get("nodes", []) + node.get("floating_nodes", []):
                 find_workspaces(child)
-        
+
         def has_windows(node):
             """Check if a node or its children have actual windows"""
             if node.get("window"):
                 return True
-            
+
             for child in node.get("nodes", []) + node.get("floating_nodes", []):
                 if has_windows(child):
                     return True
-            
+
             return False
-        
+
         find_workspaces(tree)
-        
+
         # Read current states from file
         current_states = get_workspace_states_from_file()
-        
+
         # Build new states
         new_states = {}
         for ws in range(1, 11):
             if ws in urgent_workspaces:
                 new_states[ws] = "urgent"
             elif ws in workspaces_with_windows:
-                # Preserve Claude states if they exist
+                # Preserve AI and task states if they exist
                 current = current_states.get(ws, "occupied")
-                if current in ["claude-ready", "claude-busy"]:
+                if current in [
+                    "ai-ready",
+                    "ai-busy",
+                    "task-running",
+                    "task-complete",
+                    "task-failed",
+                ]:
                     new_states[ws] = current
                 else:
                     new_states[ws] = "occupied"
             else:
                 # Workspace is empty
                 new_states[ws] = "empty"
-        
+
         # Write updated states to file
         update_workspace_state_file(new_states)
-        
+
         return new_states
-        
+
     except Exception as e:
         log(f"Error syncing workspace states: {e}", always=True)
         return {}
 
 
 def get_workspace_states():
-    """Get current state of all workspaces from file and i3 focus state"""
+    """Get current state of all workspaces from file only"""
     try:
-        # Get focus information from i3
-        result = subprocess.run(
-            ["i3-msg", "-t", "get_workspaces"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        workspaces = json.loads(result.stdout)
-        
-        # Find which workspace is focused
-        focused_workspace = None
-        for ws in workspaces:
-            try:
-                num = int(ws["name"])
-                if ws["focused"]:
-                    focused_workspace = num
-                    break
-            except (ValueError, KeyError):
-                continue
-        
-        # Get states from file
+        # Get states from file (which now includes focused state)
         file_states = get_workspace_states_from_file()
-        
-        # Build states with focus information
+
+        # Build states with focus information from the file
         states = {}
-        for num in WORKSPACE_TO_LED.keys():
-            state = file_states.get(num, "empty")
-            is_focused = (num == focused_workspace)
-            states[num] = (state, is_focused)
-        
+        status_file = Path.home() / ".config" / "i3" / "workspace-status.json"
+
+        if status_file.exists():
+            with open(status_file, "r") as f:
+                data = json.load(f)
+
+                for num in WORKSPACE_TO_LED.keys():
+                    ws_str = str(num)
+                    ws_data = data.get(ws_str, ["empty"])
+
+                    # Ensure it's a list
+                    if not isinstance(ws_data, list):
+                        ws_data = [ws_data] if ws_data else ["empty"]
+
+                    # Check if this workspace is focused
+                    is_focused = "focused" in ws_data
+
+                    # Get the display state (not including "focused")
+                    display_states = [s for s in ws_data if s != "focused"]
+                    if display_states:
+                        # Pick highest priority state (excluding focused)
+                        best_state = min(
+                            display_states, key=lambda s: resolve_state_priority(s)
+                        )
+                    else:
+                        best_state = "empty"
+
+                    states[num] = (best_state, is_focused)
+        else:
+            # No file, all empty and unfocused
+            for num in WORKSPACE_TO_LED.keys():
+                states[num] = ("empty", False)
+
         return states
     except Exception as e:
         log(f"Error getting workspace states: {e}", always=True)
@@ -561,13 +780,31 @@ def get_color_circle(r, g, b):
 
 def monitor_loop(rgb_control):
     """Main monitoring loop using i3-msg subscribe and inotify file monitoring"""
-    log(
-        "Monitoring i3 workspaces and keyboard colors... (Ctrl+C to exit)"
-    )
+    log("Monitoring i3 workspaces and keyboard colors... (Ctrl+C to exit)")
 
     # Sync initial workspace states to file
     sync_workspace_states_to_file()
-    
+
+    # Get initial focus and update in file
+    try:
+        result = subprocess.run(
+            ["i3-msg", "-t", "get_workspaces"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        workspaces = json.loads(result.stdout)
+        for ws in workspaces:
+            if ws.get("focused"):
+                try:
+                    ws_num = int(ws["name"])
+                    update_focused_workspace(ws_num)
+                    break
+                except (ValueError, KeyError):
+                    pass
+    except Exception as e:
+        log(f"Error getting initial focus: {e}", always=True)
+
     # Set initial state
     previous_states, _ = update_leds(rgb_control)
 
@@ -660,10 +897,28 @@ def monitor_loop(rgb_control):
                         "close",
                         "move",
                     ]:
+                        # Handle focus event to update focused state and clear task states
+                        if event.get("change") == "focus":
+                            # Get the workspace number that got focus
+                            if event.get("current") and event["current"].get("name"):
+                                try:
+                                    ws_num = int(event["current"]["name"])
+                                    # Update focused state and clear completed task states
+                                    update_focused_workspace(ws_num)
+                                except (ValueError, KeyError):
+                                    pass
+
                         # Sync i3 state to file when workspace state might have changed
-                        if event.get("change") in ["init", "empty", "urgent", "new", "close", "move"]:
+                        if event.get("change") in [
+                            "init",
+                            "empty",
+                            "urgent",
+                            "new",
+                            "close",
+                            "move",
+                        ]:
                             sync_workspace_states_to_file()
-                        
+
                         previous_states, changed = update_leds(
                             rgb_control, previous_states
                         )

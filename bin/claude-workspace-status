@@ -5,7 +5,7 @@
 #
 # This script is designed to be called from Claude Code hooks to update
 # the workspace status that the i3-voyager-rgb script uses for LED colors.
-# States: claude-ready, claude-busy, or clear (to remove Claude state)
+# States: ai-ready, ai-busy, or clear (to remove AI state)
 
 # Exit if TERMINAL_WORKSPACE is not set
 if [ -z "$TERMINAL_WORKSPACE" ]; then
@@ -13,20 +13,20 @@ if [ -z "$TERMINAL_WORKSPACE" ]; then
 fi
 
 # Handle status mapping
-# Map "ready" to "claude-ready", "busy" to "claude-busy"
-# "clear" or empty string will restore to occupied/idle based on windows
+# Map "ready" to "ai-ready", "busy" to "ai-busy"
+# "clear" or empty string will restore to occupied/empty based on windows
 if [ $# -eq 1 ]; then
     case "$1" in
-        ready) STATUS="claude-ready" ;;
-        busy) STATUS="claude-busy" ;;
+        ready) STATUS="ai-ready" ;;
+        busy) STATUS="ai-busy" ;;
         clear|"")
-            # We'll clear Claude status and let i3-voyager-rgb determine occupied/idle
+            # We'll clear AI status and let i3-voyager-rgb determine occupied/empty
             STATUS=""
             ;;
         *) STATUS="$1" ;;  # Pass through unknown states
     esac
 else
-    STATUS="claude-ready"  # Default to ready
+    STATUS="ai-ready"  # Default to ready
 fi
 
 # Ensure the directory exists
@@ -36,52 +36,79 @@ mkdir -p ~/.config/i3
 STATUS_FILE=~/.config/i3/workspace-status.json
 
 # Create the status file with all 10 workspaces if it doesn't exist
-# Use "empty" as the default state
+# Use arrays with "empty" as the default state
 if [ ! -f "$STATUS_FILE" ]; then
     echo '{
-  "1": "empty",
-  "2": "empty",
-  "3": "empty",
-  "4": "empty",
-  "5": "empty",
-  "6": "empty",
-  "7": "empty",
-  "8": "empty",
-  "9": "empty",
-  "10": "empty"
+  "1": ["empty"],
+  "2": ["empty"],
+  "3": ["empty"],
+  "4": ["empty"],
+  "5": ["empty"],
+  "6": ["empty"],
+  "7": ["empty"],
+  "8": ["empty"],
+  "9": ["empty"],
+  "10": ["empty"]
 }' > "$STATUS_FILE"
 fi
 
 # Update the status for the current workspace
 # Using a temp file to avoid corruption if interrupted
-# Also ensures all 10 workspaces exist and sorts by key
 TEMP_FILE="/tmp/claude-status-$$"
 
-# If STATUS is empty, we need to determine if workspace should be occupied or empty
+# Handle adding or removing AI status
 if [ -z "$STATUS" ]; then
-    # Read current state to preserve occupied/empty
-    CURRENT_STATE=$(jq -r --arg ws "$TERMINAL_WORKSPACE" '.[$ws]' "$STATUS_FILE")
-    # If it was a claude state, change to occupied (assuming windows exist)
-    # i3-voyager-rgb will correct this to empty if no windows
-    if [[ "$CURRENT_STATE" == claude-* ]]; then
-        STATUS="occupied"
-    else
-        # Keep current non-claude state
-        STATUS="$CURRENT_STATE"
-    fi
+    # Clear AI status - remove ai-ready and ai-busy from array
+    jq --arg ws "$TERMINAL_WORKSPACE" '
+      # Ensure all 10 workspaces exist as arrays
+      . as $current |
+      (["1","2","3","4","5","6","7","8","9","10"] | 
+       map({key: ., value: (
+         if $current[.] == null then ["empty"]
+         elif $current[.] | type == "array" then $current[.]
+         else [$current[.]]
+         end
+       )}) | 
+       from_entries) |
+      # Remove AI states from workspace array
+      .[$ws] = (
+        (.[$ws] // ["occupied"]) as $states |
+        [$states[] | select(. != "ai-ready" and . != "ai-busy" and . != "claude-ready" and . != "claude-busy")] as $new_states |
+        if ($new_states | length) == 0 then ["occupied"]
+        else $new_states
+        end
+      ) |
+      # Sort by numeric key
+      to_entries | sort_by(.key | tonumber) | from_entries
+    ' "$STATUS_FILE" > "$TEMP_FILE" && mv "$TEMP_FILE" "$STATUS_FILE"
+else
+    # Add AI status to array
+    # First remove any existing AI states, then add the new one
+    jq --arg ws "$TERMINAL_WORKSPACE" --arg status "$STATUS" '
+      # Ensure all 10 workspaces exist as arrays
+      . as $current |
+      (["1","2","3","4","5","6","7","8","9","10"] | 
+       map({key: ., value: (
+         if $current[.] == null then ["empty"]
+         elif $current[.] | type == "array" then $current[.]
+         else [$current[.]]
+         end
+       )}) | 
+       from_entries) |
+      # Remove old AI states and add new one
+      .[$ws] = (
+        (.[$ws] // ["occupied"]) as $states |
+        # Remove any existing AI states
+        [$states[] | select(. != "ai-ready" and . != "ai-busy" and . != "claude-ready" and . != "claude-busy")] as $clean_states |
+        # Add the new status if not already present
+        if ($status | IN($clean_states[])) then $clean_states
+        else $clean_states + [$status]
+        end
+      ) |
+      # Sort by numeric key
+      to_entries | sort_by(.key | tonumber) | from_entries
+    ' "$STATUS_FILE" > "$TEMP_FILE" && mv "$TEMP_FILE" "$STATUS_FILE"
 fi
-
-jq --arg ws "$TERMINAL_WORKSPACE" --arg status "$STATUS" '
-  # Ensure all 10 workspaces exist with empty as default
-  . as $current |
-  (["1","2","3","4","5","6","7","8","9","10"] | 
-   map({key: ., value: ($current[.] // "empty")}) | 
-   from_entries) |
-  # Update the current workspace
-  .[$ws] = $status |
-  # Sort by numeric key
-  to_entries | sort_by(.key | tonumber) | from_entries
-' "$STATUS_FILE" > "$TEMP_FILE" && mv "$TEMP_FILE" "$STATUS_FILE"
 
 # Return success/failure based on the operation
 if [ $? -eq 0 ]; then
