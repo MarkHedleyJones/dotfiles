@@ -106,7 +106,7 @@ STATE_COLOR_MAP = {
 def get_color_rgb(color_name, brightness="normal"):
     """Get RGB values for a color name with brightness level"""
     if brightness == "dim":
-        key = f"{color_name}"
+        key = f"{color_name}_dim"
     elif brightness == "bright":
         key = f"{color_name}_bright"
     else:
