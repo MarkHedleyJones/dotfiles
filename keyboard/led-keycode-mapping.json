@@ -1,0 +1,210 @@
+{
+  "0": {
+    "keycode": 1,
+    "keyname": "KEY_ESC"
+  },
+  "1": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "2": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "3": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "4": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "5": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "6": {
+    "keycode": 28,
+    "keyname": "KEY_ENTER"
+  },
+  "7": {
+    "keycode": 16,
+    "keyname": "KEY_Q"
+  },
+  "8": {
+    "keycode": 17,
+    "keyname": "KEY_W"
+  },
+  "9": {
+    "keycode": 33,
+    "keyname": "KEY_F"
+  },
+  "10": {
+    "keycode": 25,
+    "keyname": "KEY_P"
+  },
+  "11": {
+    "keycode": 34,
+    "keyname": "KEY_G"
+  },
+  "12": {
+    "keycode": 42,
+    "keyname": "KEY_LEFTSHIFT"
+  },
+  "13": {
+    "keycode": 30,
+    "keyname": "KEY_A"
+  },
+  "14": {
+    "keycode": 19,
+    "keyname": "KEY_R"
+  },
+  "15": {
+    "keycode": 31,
+    "keyname": "KEY_S"
+  },
+  "16": {
+    "keycode": 20,
+    "keyname": "KEY_T"
+  },
+  "17": {
+    "keycode": 32,
+    "keyname": "KEY_D"
+  },
+  "18": {
+    "keycode": 29,
+    "keyname": "KEY_LEFTCTRL"
+  },
+  "19": {
+    "keycode": 44,
+    "keyname": "KEY_Z"
+  },
+  "20": {
+    "keycode": 45,
+    "keyname": "KEY_X"
+  },
+  "21": {
+    "keycode": 46,
+    "keyname": "KEY_C"
+  },
+  "22": {
+    "keycode": 47,
+    "keyname": "KEY_V"
+  },
+  "23": {
+    "keycode": 48,
+    "keyname": "KEY_B"
+  },
+  "24": {
+    "keycode": 28,
+    "keyname": "KEY_ENTER"
+  },
+  "25": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "26": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "27": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "28": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "29": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "30": {
+    "keycode": 125,
+    "keyname": "KEY_LEFTMETA"
+  },
+  "31": {
+    "keycode": 13,
+    "keyname": "KEY_EQUAL"
+  },
+  "32": {
+    "keycode": 36,
+    "keyname": "KEY_J"
+  },
+  "33": {
+    "keycode": 38,
+    "keyname": "KEY_L"
+  },
+  "34": {
+    "keycode": 22,
+    "keyname": "KEY_U"
+  },
+  "35": {
+    "keycode": 21,
+    "keyname": "KEY_Y"
+  },
+  "36": {
+    "keycode": 39,
+    "keyname": "KEY_SEMICOLON"
+  },
+  "37": {
+    "keycode": 12,
+    "keyname": "KEY_MINUS"
+  },
+  "38": {
+    "keycode": 35,
+    "keyname": "KEY_H"
+  },
+  "39": {
+    "keycode": 49,
+    "keyname": "KEY_N"
+  },
+  "40": {
+    "keycode": 18,
+    "keyname": "KEY_E"
+  },
+  "41": {
+    "keycode": 23,
+    "keyname": "KEY_I"
+  },
+  "42": {
+    "keycode": 24,
+    "keyname": "KEY_O"
+  },
+  "43": {
+    "keycode": 40,
+    "keyname": "KEY_APOSTROPHE"
+  },
+  "44": {
+    "keycode": 37,
+    "keyname": "KEY_K"
+  },
+  "45": {
+    "keycode": 50,
+    "keyname": "KEY_M"
+  },
+  "46": {
+    "keycode": 51,
+    "keyname": "KEY_COMMA"
+  },
+  "47": {
+    "keycode": 52,
+    "keyname": "KEY_DOT"
+  },
+  "48": {
+    "keycode": 53,
+    "keyname": "KEY_SLASH"
+  },
+  "49": {
+    "keycode": 111,
+    "keyname": "KEY_DELETE"
+  },
+  "50": {
+    "keycode": 15,
+    "keyname": "KEY_TAB"
+  },
+  "51": {
+    "keycode": 57,
+    "keyname": "KEY_SPACE"
+  }
+}

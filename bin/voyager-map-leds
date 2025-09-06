@@ -305,11 +305,24 @@ class VoyagerLEDMapper:
         
         # Save mapping if we collected any data
         if mapping and not abort:
-            output_file = Path.home() / ".config" / "keyboard" / "led-keycode-mapping.json"
-            output_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file, 'w') as f:
+            # Save to repository
+            repo_file = dotfiles_dir / "keyboard" / "led-keycode-mapping.json"
+            repo_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(repo_file, 'w') as f:
                 json.dump(mapping, f, indent=2)
-            print(f"\n✓ Mapping saved to: {output_file}")
+            print(f"\n✓ Mapping saved to: {repo_file}")
+            
+            # Create symlink in .config
+            config_file = Path.home() / ".config" / "keyboard" / "led-keycode-mapping.json"
+            config_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Remove existing file/link if present
+            if config_file.exists() or config_file.is_symlink():
+                config_file.unlink()
+            
+            # Create symlink
+            config_file.symlink_to(repo_file)
+            print(f"✓ Symlink created: {config_file} → {repo_file}")
             print(f"✓ Mapped {len(mapping)} LEDs to keycodes")
         
         return mapping
