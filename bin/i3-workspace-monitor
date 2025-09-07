@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+#
+# i3-workspace-monitor - Monitor i3 events and update workspace status
+#
+# This daemon subscribes to i3 events and calls set-workspace-status
+# to update workspace states based on:
+#   - Focus changes (focused/unfocused)
+#   - Window presence (occupied/empty)
+#   - Urgent state changes
+#
+# Usage: i3-workspace-monitor [-v]
+#   -v: Verbose output for debugging
+
+VERBOSE=false
+if [ "$1" = "-v" ]; then
+    VERBOSE=true
+fi
+
+log() {
+    if [ "$VERBOSE" = true ]; then
+        echo "[$(date '+%H:%M:%S')] $*"
+    fi
+}
+
+# Kill any existing instances
+CURRENT_PID=$$
+for pid in $(pgrep -f "i3-workspace-monitor" | grep -v "^$CURRENT_PID$"); do
+    log "Killing existing i3-workspace-monitor (PID: $pid)"
+    kill "$pid" 2>/dev/null
+done
+
+log "Starting i3-workspace-monitor..."
+
+# Function to get current workspace states from i3
+update_workspace_states() {
+    # Get all workspace info
+    local workspaces=$(i3-msg -t get_workspaces)
+
+    # Get workspace tree to check for windows
+    local tree=$(i3-msg -t get_tree)
+
+    # Process each workspace (1-10)
+    for ws in {1..10}; do
+        # Check if workspace is focused
+        local is_focused=$(echo "$workspaces" | jq -r ".[] | select(.name == \"$ws\") | .focused")
+
+        # Check if workspace is urgent
+        local is_urgent=$(echo "$workspaces" | jq -r ".[] | select(.name == \"$ws\") | .urgent")
+
+        # Check if workspace has windows (simplified check)
+        local has_windows=$(echo "$tree" | jq -r "
+            .. | objects |
+            select(.type == \"workspace\" and .name == \"$ws\") |
+            .nodes + .floating_nodes |
+            length > 0
+        ")
+
+        # Update states based on findings
+        if [ "$is_focused" = "true" ]; then
+            set-workspace-status "$ws" focused
+            log "Workspace $ws: focused"
+        else
+            set-workspace-status "$ws" unfocused
+        fi
+
+        if [ "$is_urgent" = "true" ]; then
+            set-workspace-status "$ws" urgent
+            log "Workspace $ws: urgent"
+        fi
+
+        if [ "$has_windows" = "true" ]; then
+            set-workspace-status "$ws" occupied
+            log "Workspace $ws: occupied"
+        else
+            # Only set empty if no AI or task states exist
+            # Let set-workspace-status handle the logic
+            local current_states=$(cat ~/.config/i3/workspace-status.json | jq -r ".\"$ws\" | join(\",\")")
+            if [[ ! "$current_states" =~ (ai-|task-) ]]; then
+                set-workspace-status "$ws" empty
+                log "Workspace $ws: empty"
+            fi
+        fi
+    done
+}
+
+# Initial sync
+log "Performing initial workspace sync..."
+update_workspace_states
+
+# Subscribe to i3 events and process them
+log "Subscribing to i3 events..."
+i3-msg -t subscribe -m '["workspace", "window"]' | while read -r event; do
+    # Parse event type
+    change=$(echo "$event" | jq -r '.change')
+
+    case "$change" in
+        focus)
+            # Workspace focus changed
+            current_ws=$(echo "$event" | jq -r '.current.name // empty')
+            old_ws=$(echo "$event" | jq -r '.old.name // empty')
+
+            if [ -n "$current_ws" ] && [[ "$current_ws" =~ ^[1-9]$|^10$ ]]; then
+                set-workspace-status "$current_ws" focused
+                log "Focus moved to workspace $current_ws"
+            fi
+
+            if [ -n "$old_ws" ] && [[ "$old_ws" =~ ^[1-9]$|^10$ ]]; then
+                set-workspace-status "$old_ws" unfocused
+                log "Focus left workspace $old_ws"
+            fi
+            ;;
+
+        init|empty)
+            # Workspace created or became empty
+            ws=$(echo "$event" | jq -r '.current.name // empty')
+            if [ -n "$ws" ] && [[ "$ws" =~ ^[1-9]$|^10$ ]]; then
+                if [ "$change" = "empty" ]; then
+                    # Check if there are AI/task states before setting empty
+                    current_states=$(cat ~/.config/i3/workspace-status.json | jq -r ".\"$ws\" | join(\",\")")
+                    if [[ ! "$current_states" =~ (ai-|task-) ]]; then
+                        set-workspace-status "$ws" empty
+                        log "Workspace $ws became empty"
+                    fi
+                else
+                    set-workspace-status "$ws" occupied
+                    log "Workspace $ws initialized"
+                fi
+            fi
+            ;;
+
+        urgent)
+            # Window urgency changed
+            ws=$(echo "$event" | jq -r '.container.workspace // empty')
+            if [ -n "$ws" ] && [[ "$ws" =~ ^[1-9]$|^10$ ]]; then
+                set-workspace-status "$ws" urgent
+                log "Workspace $ws marked urgent"
+            fi
+            ;;
+
+        new|close|move)
+            # Window created, closed, or moved - update occupied/empty states
+            # Do a full resync to be safe
+            log "Window change detected, resyncing..."
+            update_workspace_states
+            ;;
+    esac
+done
+
+log "i3-workspace-monitor stopped"

@@ -1,0 +1,445 @@
+#!/usr/bin/env python3
+"""
+voyager-workspace-status-daemon - Display workspace status on Voyager keyboard LEDs
+
+This daemon watches workspace-status.json and updates the Voyager keyboard
+RGB LEDs based on workspace states. It only handles LED display logic,
+not state management.
+"""
+
+import argparse
+import json
+import os
+import signal
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+import grpc
+
+# Global verbose flag
+VERBOSE = False
+
+def log(message, always=False):
+    """Print message only if verbose mode is enabled or always=True"""
+    if VERBOSE or always:
+        print(message)
+
+# Add the lib directory to path to import keymapp modules
+real_script_path = Path(os.path.realpath(__file__))
+dotfiles_dir = real_script_path.parent.parent
+lib_dir = dotfiles_dir / "lib"
+sys.path.insert(0, str(lib_dir))
+
+try:
+    import keymapp_pb2
+    import keymapp_pb2_grpc
+except ImportError as e:
+    print("Error: Cannot import keymapp modules")
+    print("Please install grpcio using ONE of these methods:")
+    print("  1. System package: sudo apt install python3-grpcio")
+    print("  2. With pipx: pipx install grpcio")
+    print("  3. In a venv: python3 -m venv venv && venv/bin/pip install grpcio")
+    print(f"\nDetails: {e}")
+    sys.exit(1)
+
+# Load color definitions
+def load_color_palette():
+    """Load calibrated colors from keyboard-led-colours.json"""
+    colors_file = Path.home() / ".config" / "keyboard" / "keyboard-led-colours.json"
+    if colors_file.exists():
+        try:
+            with open(colors_file, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            log(f"⚠ Warning: Could not load keyboard-led-colours.json: {e}", always=True)
+
+    # Return default colors if file not found
+    log("⚠ Warning: keyboard-led-colours.json not found, using defaults", always=True)
+    return {
+        "off": [0, 0, 0],
+        "white": [110, 110, 110],
+        "white_dim": [30, 30, 30],
+        "white_bright": [255, 255, 255],
+        "red": [70, 0, 0],
+        "red_dim": [30, 0, 0],
+        "red_bright": [255, 0, 0],
+        "green": [0, 110, 0],
+        "green_dim": [0, 30, 0],
+        "green_bright": [0, 255, 0],
+        "blue": [0, 0, 110],
+        "blue_dim": [0, 0, 30],
+        "blue_bright": [0, 255, 255],
+        "yellow": [110, 110, 0],
+        "yellow_dim": [30, 30, 0],
+        "yellow_bright": [255, 255, 0],
+    }
+
+# Load color palette
+COLOR_PALETTE = load_color_palette()
+
+# State to color mapping
+STATE_COLOR_MAP = {
+    "empty": "off",
+    "occupied": "white",
+    "ai-ready": "green",
+    "ai-busy": "yellow",
+    "ai-complete": "blue",
+    "task-running": "yellow",
+    "task-succeeded": "blue",
+    "task-failed": "red",
+    "urgent": "red",
+}
+
+# State priority (higher index = higher priority)
+STATE_PRIORITY = [
+    "empty",
+    "occupied",
+    "ai-ready",
+    "task-succeeded",
+    "ai-complete",
+    "task-running",
+    "ai-busy",
+    "task-failed",
+    "urgent",
+]
+
+# Workspace to LED mapping (F1-F10 keys)
+WORKSPACE_TO_LED = {
+    1: 1,   # F1
+    2: 2,   # F2
+    3: 3,   # F3
+    4: 4,   # F4
+    5: 5,   # F5
+    6: 26,  # F6
+    7: 27,  # F7
+    8: 28,  # F8
+    9: 29,  # F9
+    10: 30, # F10
+}
+
+class VoyagerRGBControl:
+    """Control Voyager RGB via Keymapp API"""
+
+    def __init__(self):
+        self.channel = None
+        self.stub = None
+        self.connected = False
+        self.current_leds = {}
+        self.refresh_thread = None
+        self.running = False
+
+    def connect(self):
+        """Connect to Keymapp gRPC service"""
+        socket_paths = [
+            os.path.expanduser("~/.config/.keymapp/keymapp.sock"),
+            "/tmp/keymapp.sock",
+            os.path.expanduser("~/.keymapp/keymapp.sock"),
+        ]
+
+        for socket_path in socket_paths:
+            if os.path.exists(socket_path):
+                try:
+                    self.channel = grpc.insecure_channel(f"unix://{socket_path}")
+                    self.stub = keymapp_pb2_grpc.KeyboardServiceStub(self.channel)
+
+                    # Test connection
+                    status = self.stub.GetStatus(keymapp_pb2.GetStatusRequest())
+
+                    if status.connected_keyboard.friendly_name:
+                        self.connected = True
+                        log(f"✓ Connected to {status.connected_keyboard.friendly_name} via {socket_path}")
+                        self.start_refresh_thread()
+                        return True
+
+                    # Try to connect
+                    reply = self.stub.ConnectAnyKeyboard(keymapp_pb2.ConnectAnyKeyboardRequest())
+                    if reply.success:
+                        self.connected = True
+                        log(f"✓ Connected to Voyager keyboard via {socket_path}")
+                        self.start_refresh_thread()
+                        return True
+                except:
+                    continue
+
+        log(f"✗ Cannot connect to Keymapp", always=True)
+        return False
+
+    def start_refresh_thread(self):
+        """Start thread to refresh LEDs periodically"""
+        def refresh_loop():
+            while self.running:
+                time.sleep(2)
+                try:
+                    for led_id, (r, g, b) in self.current_leds.items():
+                        if self.stub:
+                            request = keymapp_pb2.SetRGBLedRequest(
+                                led=led_id, red=r, green=g, blue=b, sustain=0
+                            )
+                            self.stub.SetRGBLed(request)
+                except:
+                    pass
+
+        self.running = True
+        self.refresh_thread = threading.Thread(target=refresh_loop, daemon=True)
+        self.refresh_thread.start()
+
+    def set_led_color(self, led_index, r, g, b):
+        """Set the color of a specific LED"""
+        if not self.connected:
+            return False
+
+        if r == 0 and g == 0 and b == 0:
+            self.current_leds.pop(led_index, None)
+        else:
+            self.current_leds[led_index] = (r, g, b)
+
+        try:
+            request = keymapp_pb2.SetRGBLedRequest(
+                led=led_index, red=r, green=g, blue=b, sustain=0
+            )
+            reply = self.stub.SetRGBLed(request)
+            return reply.success
+        except:
+            self.connected = False
+            return False
+
+    def cleanup(self):
+        """Clean up and turn off LEDs"""
+        self.running = False
+
+        if self.connected:
+            for led in WORKSPACE_TO_LED.values():
+                try:
+                    request = keymapp_pb2.SetRGBLedRequest(
+                        led=led, red=0, green=0, blue=0, sustain=0
+                    )
+                    self.stub.SetRGBLed(request)
+                except:
+                    pass
+
+        if self.channel:
+            self.channel.close()
+
+def get_color_for_state(state, is_focused):
+    """Get RGB color for a state, considering focus"""
+    color_name = STATE_COLOR_MAP.get(state, "off")
+
+    # Use bright version if focused, dim otherwise
+    if is_focused:
+        key = f"{color_name}_bright"
+    else:
+        key = f"{color_name}_dim"
+
+    # Get color from palette with fallback
+    if key in COLOR_PALETTE:
+        return COLOR_PALETTE[key]
+    elif color_name in COLOR_PALETTE:
+        return COLOR_PALETTE[color_name]
+    else:
+        return [0, 0, 0]
+
+def get_highest_priority_state(states):
+    """Get the highest priority state from a list of states"""
+    if not states:
+        return "empty"
+
+    # Filter out 'focused' as it's not a color state
+    color_states = [s for s in states if s != "focused"]
+    if not color_states:
+        return "empty"
+
+    # Find highest priority state
+    highest_priority = -1
+    highest_state = "empty"
+
+    for state in color_states:
+        try:
+            priority = STATE_PRIORITY.index(state)
+            if priority > highest_priority:
+                highest_priority = priority
+                highest_state = state
+        except ValueError:
+            # Unknown state, ignore
+            pass
+
+    return highest_state
+
+def update_leds(rgb_control, workspace_states):
+    """Update LEDs based on workspace states"""
+    for ws_num, states in workspace_states.items():
+        if ws_num in WORKSPACE_TO_LED:
+            # Check if workspace is focused
+            is_focused = "focused" in states
+
+            # Get highest priority state
+            state = get_highest_priority_state(states)
+
+            # Get color for state
+            color = get_color_for_state(state, is_focused)
+
+            # Update LED
+            led = WORKSPACE_TO_LED[ws_num]
+            if rgb_control.set_led_color(led, *color):
+                focus_str = " [FOCUSED]" if is_focused else ""
+                log(f"Workspace {ws_num}: {state}{focus_str} → RGB{color}")
+
+def read_and_update_workspace_status(rgb_control, status_file):
+    """Read workspace status file and update LEDs"""
+    try:
+        # Read workspace states
+        with open(status_file, "r") as f:
+            data = json.load(f)
+
+        # Convert to integer keys
+        workspace_states = {}
+        for ws_str, states in data.items():
+            try:
+                ws_num = int(ws_str)
+                if ws_num in WORKSPACE_TO_LED:
+                    workspace_states[ws_num] = states if isinstance(states, list) else [states]
+            except ValueError:
+                pass
+
+        # Update LEDs
+        update_leds(rgb_control, workspace_states)
+
+        # Try to reconnect if disconnected
+        if not rgb_control.connected:
+            rgb_control.connect()
+    except Exception as e:
+        log(f"Error reading status file: {e}", always=True)
+
+def monitor_workspace_status(rgb_control):
+    """Monitor workspace-status.json file for changes using inotify"""
+    status_file = Path.home() / ".config" / "i3" / "workspace-status.json"
+
+    # Ensure file exists
+    if not status_file.exists():
+        log("Waiting for workspace-status.json to be created...", always=True)
+        while not status_file.exists():
+            time.sleep(1)
+
+    log("Monitoring workspace status...", always=True)
+
+    # Initial read
+    read_and_update_workspace_status(rgb_control, status_file)
+
+    # Use inotifywait for efficient file monitoring
+    try:
+        # Watch for modifications and moves to the file
+        process = subprocess.Popen(
+            ["inotifywait", "-m", "-e", "modify,moved_to", str(status_file.parent)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True
+        )
+
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                break
+
+            # Check if our file was modified
+            if "workspace-status.json" in line:
+                # Small delay to ensure write is complete
+                time.sleep(0.01)
+                read_and_update_workspace_status(rgb_control, status_file)
+
+    except FileNotFoundError:
+        # Fallback to polling if inotifywait is not available
+        log("⚠ inotifywait not found, falling back to polling", always=True)
+
+        last_mtime = 0
+        while True:
+            try:
+                # Check if file has been modified
+                current_mtime = status_file.stat().st_mtime
+
+                if current_mtime != last_mtime:
+                    last_mtime = current_mtime
+                    read_and_update_workspace_status(rgb_control, status_file)
+
+                time.sleep(0.05)  # Poll 20 times per second
+
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                log(f"Error: {e}", always=True)
+                time.sleep(1)
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals"""
+    raise KeyboardInterrupt
+
+def main():
+    """Main entry point"""
+    global VERBOSE
+
+    parser = argparse.ArgumentParser(description="Voyager Workspace Status Daemon")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
+    args = parser.parse_args()
+
+    VERBOSE = args.verbose
+
+    # Kill existing instances
+    current_pid = os.getpid()
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "voyager-workspace-status-daemon"],
+            capture_output=True, text=True, check=False
+        )
+        if result.returncode == 0:
+            pids = result.stdout.strip().split("\n")
+            for pid_str in pids:
+                try:
+                    pid = int(pid_str)
+                    if pid != current_pid:
+                        os.kill(pid, signal.SIGTERM)
+                        log(f"✓ Killed existing daemon (PID: {pid})", always=True)
+                        time.sleep(0.5)
+                except:
+                    pass
+    except:
+        pass
+
+    log("=" * 50)
+    log("Voyager Workspace Status Daemon")
+    log("=" * 50)
+
+    # Set up signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    # Check dependencies
+    try:
+        subprocess.run(["pgrep", "-fi", "keymapp"], capture_output=True, check=True)
+        log("✓ Keymapp is running")
+    except:
+        log("⚠ Warning: Keymapp doesn't appear to be running", always=True)
+
+    # Initialize RGB control
+    rgb_control = VoyagerRGBControl()
+    if not rgb_control.connect():
+        log("\n✗ Failed to connect to Keymapp", always=True)
+        log("  Please ensure:", always=True)
+        log("  1. Keymapp is running", always=True)
+        log("  2. Your Voyager keyboard is connected", always=True)
+        return 1
+
+    log("")
+    log("LED Mapping: Workspace 1-10 → F1-F10 keys")
+    log("")
+
+    try:
+        monitor_workspace_status(rgb_control)
+    finally:
+        rgb_control.cleanup()
+        log("✓ LEDs cleared")
+
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
