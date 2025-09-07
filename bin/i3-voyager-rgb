@@ -95,6 +95,7 @@ STATE_COLOR_MAP = {
     "occupied": "white",  # Normal white
     "ai-ready": "green",  # Green for AI ready
     "ai-busy": "yellow",  # Yellow for AI busy
+    "ai-complete": "blue",  # Blue for AI complete (needs attention)
     "task-running": "yellow",  # Yellow/amber for running task
     "task-complete": "blue",  # Blue for completed task
     "task-failed": "red",  # Red for failed task
@@ -318,6 +319,7 @@ STATE_PRIORITY = [
     "task-failed",
     "ai-busy",
     "task-running",
+    "ai-complete",
     "task-complete",
     "ai-ready",
     "occupied",
@@ -432,6 +434,7 @@ def update_workspace_state_file(workspace_states):
                 in [
                     "ai-ready",
                     "ai-busy",
+                    "ai-complete",
                     "task-running",
                     "task-complete",
                     "task-failed",
@@ -493,8 +496,8 @@ def update_focused_workspace(workspace_num):
         if workspace_num and 1 <= workspace_num <= 10:
             ws_str = str(workspace_num)
 
-            # Remove completed task states from the newly focused workspace
-            task_states_to_clear = ["task-complete", "task-failed"]
+            # Remove completed task states and ai-complete from the newly focused workspace
+            task_states_to_clear = ["task-complete", "task-failed", "ai-complete"]
             cleared_states = []
             for task_state in task_states_to_clear:
                 if task_state in data[ws_str]:
@@ -541,8 +544,8 @@ def remove_task_states_from_workspace(workspace_num):
 
                 # Handle array format
                 if isinstance(states, list):
-                    # Remove only completed task states (not task-running since it's still active)
-                    task_states = ["task-complete", "task-failed"]
+                    # Remove only completed task states and ai-complete (not task-running since it's still active)
+                    task_states = ["task-complete", "task-failed", "ai-complete"]
                     removed_states = []
 
                     for task_state in task_states:
@@ -638,6 +641,7 @@ def sync_workspace_states_to_file():
                 if current in [
                     "ai-ready",
                     "ai-busy",
+                    "ai-complete",
                     "task-running",
                     "task-complete",
                     "task-failed",

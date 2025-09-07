@@ -13,21 +13,26 @@ if [ -z "$TERMINAL_WORKSPACE" ]; then
 fi
 
 # Handle status mapping
-# Map "ready" to "ai-ready", "busy" to "ai-busy"
-# "clear" or empty string will restore to occupied/empty based on windows
-if [ $# -eq 1 ]; then
-    case "$1" in
-        ready) STATUS="ai-ready" ;;
-        busy) STATUS="ai-busy" ;;
-        clear|"")
-            # We'll clear AI status and let i3-voyager-rgb determine occupied/empty
-            STATUS=""
-            ;;
-        *) STATUS="$1" ;;  # Pass through unknown states
-    esac
+# Accept multiple statuses: "complete" = "ai-ready ai-complete"
+# "ai-exited" or "exited" will clear all AI states
+STATUSES=""
+if [ $# -eq 0 ]; then
+    STATUSES="ai-ready"  # Default to ready
+elif [ "$1" = "clear" ] || [ "$1" = "exited" ] || [ "$1" = "ai-exited" ] || [ -z "$1" ]; then
+    STATUSES=""  # Clear all AI states
 else
-    STATUS="ai-ready"  # Default to ready
+    # Process all arguments and map them
+    for arg in "$@"; do
+        case "$arg" in
+            ready) STATUSES="$STATUSES ai-ready" ;;
+            busy) STATUSES="$STATUSES ai-busy" ;;
+            complete) STATUSES="$STATUSES ai-ready ai-complete" ;;  # complete sets both
+            *) STATUSES="$STATUSES $arg" ;;  # Pass through unknown states
+        esac
+    done
 fi
+# Trim leading/trailing spaces
+STATUSES=$(echo "$STATUSES" | xargs)
 
 # Ensure the directory exists
 mkdir -p ~/.config/i3
@@ -57,23 +62,23 @@ fi
 TEMP_FILE="/tmp/claude-status-$$"
 
 # Handle adding or removing AI status
-if [ -z "$STATUS" ]; then
-    # Clear AI status - remove ai-ready and ai-busy from array
+if [ -z "$STATUSES" ]; then
+    # Clear AI status - remove ai-ready, ai-busy, and ai-complete from array
     jq --arg ws "$TERMINAL_WORKSPACE" '
       # Ensure all 10 workspaces exist as arrays
       . as $current |
-      (["1","2","3","4","5","6","7","8","9","10"] | 
+      (["1","2","3","4","5","6","7","8","9","10"] |
        map({key: ., value: (
          if $current[.] == null then ["empty"]
          elif $current[.] | type == "array" then $current[.]
          else [$current[.]]
          end
-       )}) | 
+       )}) |
        from_entries) |
       # Remove AI states from workspace array
       .[$ws] = (
         (.[$ws] // ["occupied"]) as $states |
-        [$states[] | select(. != "ai-ready" and . != "ai-busy" and . != "claude-ready" and . != "claude-busy")] as $new_states |
+        [$states[] | select(. != "ai-ready" and . != "ai-busy" and . != "ai-complete" and . != "claude-ready" and . != "claude-busy")] as $new_states |
         if ($new_states | length) == 0 then ["occupied"]
         else $new_states
         end
@@ -82,28 +87,29 @@ if [ -z "$STATUS" ]; then
       to_entries | sort_by(.key | tonumber) | from_entries
     ' "$STATUS_FILE" > "$TEMP_FILE" && mv "$TEMP_FILE" "$STATUS_FILE"
 else
-    # Add AI status to array
-    # First remove any existing AI states, then add the new one
-    jq --arg ws "$TERMINAL_WORKSPACE" --arg status "$STATUS" '
+    # Add AI statuses to array
+    # First remove any existing AI states, then add the new ones
+    # Convert space-separated statuses to JSON array
+    STATUS_ARRAY=$(echo "$STATUSES" | tr ' ' '\n' | jq -R . | jq -s .)
+
+    jq --arg ws "$TERMINAL_WORKSPACE" --argjson statuses "$STATUS_ARRAY" '
       # Ensure all 10 workspaces exist as arrays
       . as $current |
-      (["1","2","3","4","5","6","7","8","9","10"] | 
+      (["1","2","3","4","5","6","7","8","9","10"] |
        map({key: ., value: (
          if $current[.] == null then ["empty"]
          elif $current[.] | type == "array" then $current[.]
          else [$current[.]]
          end
-       )}) | 
+       )}) |
        from_entries) |
-      # Remove old AI states and add new one
+      # Remove old AI states and add new ones
       .[$ws] = (
         (.[$ws] // ["occupied"]) as $states |
         # Remove any existing AI states
-        [$states[] | select(. != "ai-ready" and . != "ai-busy" and . != "claude-ready" and . != "claude-busy")] as $clean_states |
-        # Add the new status if not already present
-        if ($status | IN($clean_states[])) then $clean_states
-        else $clean_states + [$status]
-        end
+        [$states[] | select(. != "ai-ready" and . != "ai-busy" and . != "ai-complete" and . != "claude-ready" and . != "claude-busy")] as $clean_states |
+        # Add all new statuses
+        ($clean_states + $statuses | unique)
       ) |
       # Sort by numeric key
       to_entries | sort_by(.key | tonumber) | from_entries
