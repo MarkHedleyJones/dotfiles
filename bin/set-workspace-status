@@ -89,8 +89,14 @@ case "$STATE" in
 
     ai-complete|complete)
         # Special case: adds both ai-ready and ai-complete
+        # But only add ai-complete if workspace is not focused
         jq --arg ws "$WORKSPACE" '
-          .[$ws] = ((.[$ws] // []) | map(select(. | startswith("ai-") | not)) + ["ai-ready", "ai-complete"] | unique)
+          .[$ws] as $states |
+          if ($states // [] | index("focused")) then
+            .[$ws] = (($states // []) | map(select(. | startswith("ai-") | not)) + ["ai-ready"] | unique)
+          else
+            .[$ws] = (($states // []) | map(select(. | startswith("ai-") | not)) + ["ai-ready", "ai-complete"] | unique)
+          end
         ' "$STATUS_FILE" > "$TEMP_FILE"
         ;;
 
@@ -109,8 +115,14 @@ case "$STATE" in
         ;;
 
     task-succeeded)
+        # Only add task-succeeded if workspace is not focused
         jq --arg ws "$WORKSPACE" '
-          .[$ws] = ((.[$ws] // []) | map(select(. | startswith("task-") | not)) + ["task-succeeded"] | unique)
+          .[$ws] as $states |
+          if ($states // [] | index("focused")) then
+            .[$ws] = (($states // []) | map(select(. | startswith("task-") | not)))
+          else
+            .[$ws] = (($states // []) | map(select(. | startswith("task-") | not)) + ["task-succeeded"] | unique)
+          end
         ' "$STATUS_FILE" > "$TEMP_FILE"
         ;;
 
