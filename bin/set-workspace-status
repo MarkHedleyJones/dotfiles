@@ -141,9 +141,9 @@ case "$STATE" in
 
     # Focus states (toggle)
     focused)
-        # Add focused state, remove ai-complete and task-succeeded (notification states)
+        # Add focused state, remove ai-complete, task-succeeded, and urgent (notification states)
         jq --arg ws "$WORKSPACE" '
-          .[$ws] = ((.[$ws] // []) | map(select(. != "ai-complete" and . != "task-succeeded")) + ["focused"] | unique)
+          .[$ws] = ((.[$ws] // []) | map(select(. != "ai-complete" and . != "task-succeeded" and . != "urgent")) + ["focused"] | unique)
         ' "$STATUS_FILE" > "$TEMP_FILE"
         ;;
 
