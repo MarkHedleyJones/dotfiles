@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#
+# reset-workspace-status - Reset all workspace statuses to empty at i3 startup
+#
+# This script resets the workspace status file to a clean state with all
+# workspaces marked as empty. It should be run once at i3 startup before
+# the workspace monitor starts.
+
+STATUS_FILE=~/.config/i3/workspace-status.json
+
+# Ensure directory exists
+mkdir -p ~/.config/i3
+
+# Reset all workspaces to empty state
+echo '{
+  "1": ["empty"],
+  "2": ["empty"],
+  "3": ["empty"],
+  "4": ["empty"],
+  "5": ["empty"],
+  "6": ["empty"],
+  "7": ["empty"],
+  "8": ["empty"],
+  "9": ["empty"],
+  "10": ["empty"]
+}' > "$STATUS_FILE"

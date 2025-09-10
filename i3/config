@@ -265,6 +265,7 @@ exec --no-startup-id ~/.config/i3/launch-ssh-agent.sh
 exec --no-startup-id blueman-applet
 exec --no-startup-id ~/AppImages/keymapp --minimized
 exec_always --no-startup-id bash -c "sleep 3 && ~/repos/speech-to-text/launcher.sh"
+exec --no-startup-id reset-workspace-status
 exec_always --no-startup-id i3-workspace-monitor
 exec_always --no-startup-id voyager-workspace-status-daemon
 
