@@ -1,20 +1,15 @@
 #!/usr/bin/env bash
 
-# Edit aliases
-alias ea="vim ~/repos/dotfiles/customise_shell.sh"
-# Edit bashrc
-alias eb="vim ~/.bashrc"
-# Edit i3 config
-alias ei="vim ~/repos/dotfiles/i3/config"
-
 # Calendar aliases
 alias mycal="ncal -w3Mb"
 alias mycal12="mycal -B6 -A6"
 alias mycal6="mycal -B3 -A3"
 alias mycal3="mycal"
 
-alias f="nautilus . --new-window &" # Files
-alias r="reset" # Reset
+alias f="nautilus . --new-window &"
+alias c="clear"
+alias r="reset"
+alias tmp="cd /tmp"
 
 # Python virtual environment
 alias workon="source .venv/bin/activate"
@@ -38,19 +33,19 @@ LOCAL_BIN="${HOME}/.local/bin"
 
 # If a local binary folder exists but isn't in the $PATH, add it to the $PATH
 if [ -d "${LOCAL_BIN}" ] && [ "$(export | grep PATH | grep ${LOCAL_BIN})" = "" ]; then
-    export PATH="${PATH}:${LOCAL_BIN}"
+	export PATH="${PATH}:${LOCAL_BIN}"
 fi
 
 # Track terminal workspace and window ID for notify command
 update_terminal_workspace() {
-    if [ -n "$DISPLAY" ] && command -v i3-msg >/dev/null 2>&1; then
-        local focused_window=$(xdotool getwindowfocus 2>/dev/null)
-        if [ -n "$focused_window" ] && [ "$focused_window" != "1" ]; then
-            # Store the window ID for this terminal
-            export TERMINAL_WINDOW_ID="$focused_window"
-            
-            # Also get the workspace
-            export TERMINAL_WORKSPACE=$(i3-msg -t get_tree 2>/dev/null | python3 -c "
+	if [ -n "$DISPLAY" ] && command -v i3-msg >/dev/null 2>&1; then
+		local focused_window=$(xdotool getwindowfocus 2>/dev/null)
+		if [ -n "$focused_window" ] && [ "$focused_window" != "1" ]; then
+			# Store the window ID for this terminal
+			export TERMINAL_WINDOW_ID="$focused_window"
+
+			# Also get the workspace
+			export TERMINAL_WORKSPACE=$(i3-msg -t get_tree 2>/dev/null | python3 -c "
 import sys, json
 try:
     tree = json.load(sys.stdin)
@@ -67,8 +62,8 @@ try:
     print(search(tree) or '')
 except: pass
 " 2>/dev/null)
-        fi
-    fi
+		fi
+	fi
 }
 
 # Update workspace info when terminal starts
@@ -77,5 +72,5 @@ update_terminal_workspace
 # Load personal/private aliases if they exist
 PERSONAL_ALIASES="${HOME}/.aliases"
 if [ -f "${PERSONAL_ALIASES}" ]; then
-    source "${PERSONAL_ALIASES}"
+	source "${PERSONAL_ALIASES}"
 fi
