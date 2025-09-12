@@ -1,0 +1,7 @@
+profiles:
+  aliases:
+    path: ~/.aliases
+    url: "https://gist.github.com/MarkHedleyJones/bd6375d564e2da33fcffc2f2a43d98fa"
+  claude:
+    path: ~/.claude/CLAUDE.md
+    url: "https://gist.github.com/MarkHedleyJones/18b37a6f9b7c47b2025c122409b37894"

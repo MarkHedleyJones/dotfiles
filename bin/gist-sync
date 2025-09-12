@@ -1,0 +1,266 @@
+#!/usr/bin/env bash
+#
+# gist-sync - Sync local files with GitHub Gists
+#
+# Usage: gist-sync <action> <profile>
+#
+# Actions:
+#   push    Upload local file to gist
+#   pull    Download gist to local file
+#   diff    Compare local file with gist
+#
+# Requires: gh CLI tool, yq, and authentication
+
+set -euo pipefail
+
+CONFIG_DIR="${HOME}/.config/dotfiles/gist-sync"
+CONFIG_FILE="${CONFIG_DIR}/config.yml"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+error() {
+    echo -e "${RED}Error: $1${NC}" >&2
+    exit 1
+}
+
+info() {
+    echo -e "${GREEN}$1${NC}"
+}
+
+warn() {
+    echo -e "${YELLOW}$1${NC}"
+}
+
+usage() {
+    echo "Usage: gist-sync <action> <profile>"
+    echo ""
+    echo "Actions:"
+    echo "  push    Upload local file to gist"
+    echo "  pull    Download gist to local file"
+    echo "  diff    Compare local file with gist"
+    echo ""
+    if [ -f "${CONFIG_FILE}" ]; then
+        echo "Available profiles:"
+        yq eval '.profiles | keys | .[]' "${CONFIG_FILE}" | sed 's/^/  /'
+        echo ""
+        echo "Examples:"
+        FIRST_PROFILE=$(yq eval '.profiles | keys | .[0]' "${CONFIG_FILE}")
+        echo "  gist-sync push ${FIRST_PROFILE}"
+        echo "  gist-sync diff ${FIRST_PROFILE}"
+        echo "  gist-sync pull ${FIRST_PROFILE}"
+        echo "  gist-sync pull all          # Pull all profiles"
+    else
+        echo "No config file found at ${CONFIG_FILE}"
+        echo "Create it with profiles like:"
+        echo ""
+        echo "profiles:"
+        echo "  aliases:"
+        echo "    path: ~/.aliases"
+        echo "    url: \"https://gist.github.com/username/gistid\""
+    fi
+}
+
+check_dependencies() {
+    for cmd in gh yq; do
+        if ! command -v "$cmd" &> /dev/null; then
+            error "$cmd is not installed. Install with: sudo apt install $cmd"
+        fi
+    done
+
+    if ! gh auth status &>/dev/null; then
+        error "Not authenticated with GitHub. Run: gh auth login"
+    fi
+}
+
+init_config() {
+    if [ ! -f "${CONFIG_FILE}" ]; then
+        mkdir -p "${CONFIG_DIR}"
+        cat > "${CONFIG_FILE}" << 'EOF'
+profiles:
+  aliases:
+    path: ~/.aliases
+    url: ""  # Add your gist URL here
+  claude:
+    path: ~/.claude/CLAUDE.md
+    url: ""  # Add your gist URL here
+EOF
+        info "Created config file at ${CONFIG_FILE}"
+        info "Please edit it to add your gist URLs"
+        exit 0
+    fi
+}
+
+get_profile_info() {
+    local profile="$1"
+
+    if ! yq eval ".profiles | has(\"$profile\")" "${CONFIG_FILE}" | grep -q "true"; then
+        error "Profile '$profile' not found in config"
+    fi
+
+    local path=$(yq eval ".profiles.${profile}.path" "${CONFIG_FILE}")
+    local url=$(yq eval ".profiles.${profile}.url" "${CONFIG_FILE}")
+
+    # Expand tilde in path
+    path="${path/#\~/$HOME}"
+
+    if [ -z "$url" ] || [ "$url" = "null" ]; then
+        error "No URL configured for profile '$profile'. Please edit ${CONFIG_FILE}"
+    fi
+
+    echo "$path|$url"
+}
+
+extract_gist_id() {
+    local url="$1"
+    echo "$url" | sed -E 's|https://gist\.github\.com/[^/]+/([a-f0-9]+).*|\1|'
+}
+
+do_push() {
+    local profile="$1"
+    local info=$(get_profile_info "$profile")
+    local path=$(echo "$info" | cut -d'|' -f1)
+    local url=$(echo "$info" | cut -d'|' -f2)
+    local gist_id=$(extract_gist_id "$url")
+
+    if [ ! -f "$path" ]; then
+        error "File not found: $path"
+    fi
+
+    info "Pushing $path to gist $gist_id..."
+    gh gist edit "$gist_id" "$path"
+    info "Successfully pushed to $url"
+}
+
+do_pull() {
+    local profile="$1"
+
+    # Handle "all" as a special case
+    if [ "$profile" = "all" ]; then
+        local profiles=$(yq eval '.profiles | keys | .[]' "${CONFIG_FILE}")
+        local count=0
+        local failed=0
+
+        info "Pulling all profiles..."
+        echo ""
+
+        while IFS= read -r p; do
+            echo "--- Pulling profile: $p ---"
+            count=$((count + 1))
+            if do_pull "$p"; then
+                echo ""
+            else
+                failed=$((failed + 1))
+                warn "Failed to pull profile: $p"
+                echo ""
+            fi
+        done <<< "$profiles"
+
+        echo "================================"
+        if [ $failed -eq 0 ]; then
+            info "Successfully pulled all $count profiles!"
+        else
+            warn "Pulled $((count - failed))/$count profiles (${failed} failed)"
+        fi
+        return
+    fi
+
+    local info=$(get_profile_info "$profile")
+    local path=$(echo "$info" | cut -d'|' -f1)
+    local url=$(echo "$info" | cut -d'|' -f2)
+    local gist_id=$(extract_gist_id "$url")
+
+    # Backup existing file if it exists
+    if [ -f "$path" ]; then
+        local backup_dir=$(dirname "$path")/.backups
+        mkdir -p "$backup_dir"
+        local backup_file="$backup_dir/$(basename "$path")-$(date +%Y%m%d-%H%M%S)"
+        cp "$path" "$backup_file"
+        info "Backed up existing file to: $backup_file"
+    fi
+
+    # Ensure directory exists
+    mkdir -p "$(dirname "$path")"
+
+    info "Pulling gist $gist_id to $path..."
+    gh gist view "$gist_id" --raw > "$path"
+    info "Successfully pulled from $url"
+}
+
+do_diff() {
+    local profile="$1"
+    local info=$(get_profile_info "$profile")
+    local path=$(echo "$info" | cut -d'|' -f1)
+    local url=$(echo "$info" | cut -d'|' -f2)
+    local gist_id=$(extract_gist_id "$url")
+
+    local temp_file="/tmp/gist-sync-${profile}-$$"
+
+    # Download gist to temp file
+    gh gist view "$gist_id" --raw > "$temp_file"
+
+    echo "Comparing local file with gist ($gist_id)..."
+    echo "================================"
+
+    if [ ! -f "$path" ]; then
+        warn "Local file $path does not exist"
+        echo "Gist contents:"
+        echo "---"
+        cat "$temp_file"
+        echo "---"
+    else
+        # Check if files are identical first
+        if cmp -s "$path" "$temp_file"; then
+            info "Files are identical!"
+        else
+            # Show the diff
+            git diff --no-index "$path" "$temp_file"
+            echo ""
+            echo "================================"
+            echo "To push local changes: gist-sync push $profile"
+            echo "To pull gist changes:  gist-sync pull $profile"
+        fi
+    fi
+
+    rm -f "$temp_file"
+}
+
+main() {
+    if [ $# -eq 0 ]; then
+        usage
+        exit 0
+    fi
+
+    check_dependencies
+    init_config
+
+    local action="$1"
+
+    if [ $# -lt 2 ]; then
+        usage
+        exit 1
+    fi
+
+    local profile="$2"
+
+    case "$action" in
+        push)
+            do_push "$profile"
+            ;;
+        pull)
+            do_pull "$profile"
+            ;;
+        diff)
+            do_diff "$profile"
+            ;;
+        *)
+            error "Unknown action: $action"
+            ;;
+    esac
+}
+
+main "$@"

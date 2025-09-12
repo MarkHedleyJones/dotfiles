@@ -77,6 +77,33 @@ else
 	echo "Warning: ${SCRIPT_DIR}/keyboard does not exist, skipping keyboard configuration"
 fi
 
+# Recursively link config files from config/ to ~/.config/dotfiles/
+if [ -d "${SCRIPT_DIR}/config" ]; then
+	echo ""
+	echo "Setting up configuration files..."
+	CONFIG_TARGET_DIR="${HOME}/.config/dotfiles"
+	mkdir -p "${CONFIG_TARGET_DIR}"
+
+	# Use find to recursively process all files in config/
+	while IFS= read -r -d '' config_file; do
+		# Get relative path from config directory
+		relative_path="${config_file#${SCRIPT_DIR}/config/}"
+		target_file="${CONFIG_TARGET_DIR}/${relative_path}"
+		target_dir="$(dirname "${target_file}")"
+
+		# Create target directory if it doesn't exist
+		mkdir -p "${target_dir}"
+
+		# Link the file if not already linked
+		if [ ! -L "${target_file}" ]; then
+			echo "Linking config: ${relative_path}"
+			ln -sf "${config_file}" "${target_file}"
+		fi
+	done < <(find "${SCRIPT_DIR}/config" -type f -print0)
+else
+	echo "Warning: ${SCRIPT_DIR}/config does not exist, skipping config linking"
+fi
+
 # Set up personal aliases file if it doesn't exist
 if [ ! -f "${PERSONAL_ALIASES}" ]; then
 	echo "Creating personal aliases file from template..."
