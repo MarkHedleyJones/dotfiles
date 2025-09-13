@@ -52,6 +52,9 @@ echo "📍 Workspace: $TERMINAL_WORKSPACE"
 echo "🕐 Started: $START_DATE"
 echo ""
 
+# Set environment variable to indicate we're running under long
+export LONG_WRAPPED=1
+
 # Run the command, preserving all arguments and output
 "$@"
 EXIT_CODE=$?
