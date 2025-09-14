@@ -1,16 +1,29 @@
 #!/usr/bin/env bash
 
 if [ $# -eq 0 ]; then
-  base_path=$(pwd)
-elif [ $# -eq 1 ]; then
-  base_path=$1
+  # No arguments - scan current directory
+  targets=($(pwd))
 else
-  echo "Usage: $(basename $0) [PATH]"
-  exit 1
+  # Arguments provided - each could be file or directory
+  targets=("$@")
 fi
 
-cpp_files_to_check=($(find -L ${base_path} \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print))
-python_files_to_check=($(find -L ${base_path} \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.py' \) -print))
+cpp_files_to_check=()
+python_files_to_check=()
+
+for target in "${targets[@]}"; do
+  if [ -d "$target" ]; then
+    # It's a directory - find files in it
+    cpp_files_to_check+=($(find -L "$target" \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.cpp' -o -name '*.h' \) -print))
+    python_files_to_check+=($(find -L "$target" \( -name repos -o -name build -o -name pcl \) -prune -o \( -name '*.py' \) -print))
+  else
+    # It's a file - add to appropriate list
+    case "$target" in
+      *.cpp|*.h) cpp_files_to_check+=("$target") ;;
+      *.py) python_files_to_check+=("$target") ;;
+    esac
+  fi
+done
 
 echo "Running roslint (from ROS)"
 for file_path in ${cpp_files_to_check[*]}; do
