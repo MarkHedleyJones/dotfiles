@@ -43,6 +43,17 @@ COMMAND="$*"
 START_TIME=$(date +%s)
 START_DATE=$(date '+%Y-%m-%d %H:%M:%S')
 
+# Function to cleanup workspace status on interrupt
+cleanup_workspace_status() {
+    set-workspace-status task-clear
+    echo ""
+    echo "🛑 Command interrupted"
+    exit 130
+}
+
+# Set trap to cleanup on interrupt or terminate (not normal exit)
+trap cleanup_workspace_status INT TERM
+
 # Set status to task-running (automatically clears other task states)
 set-workspace-status task-running
 
