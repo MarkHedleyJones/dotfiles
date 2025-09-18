@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+#
+# get-workspace-id - Find which i3 workspace a process belongs to
+#
+# This walks up the process tree looking for a process with an X11 window,
+# then queries i3 to find which workspace that window is on.
+#
+# Usage: get-workspace-id [PID]
+#   PID: Process ID to check (defaults to current process)
+#
+# Returns: Workspace number (1-10) or empty if not found
+
+# Debug mode
+DEBUG=${DEBUG:-0}
+
+debug() {
+	[ "$DEBUG" = "1" ] && echo "[DEBUG] $*" >&2
+}
+
+# Get PID to check (default to current process)
+PID=${1:-$$}
+debug "Starting with PID: $PID"
+
+# Function to get parent PID
+get_ppid() {
+	local pid=$1
+	if [ -f "/proc/$pid/stat" ]; then
+		awk '{print $4}' "/proc/$pid/stat" 2>/dev/null
+	else
+		echo "0"
+	fi
+}
+
+# Function to find windows for a PID
+get_windows_for_pid() {
+	local pid=$1
+	# Use xdotool to search for windows by PID
+	xdotool search --pid "$pid" 2>/dev/null
+}
+
+# Function to check if we're in a terminal and get its window
+get_terminal_window() {
+	# Try to get window ID from environment
+	if [ -n "$WINDOWID" ]; then
+		debug "Found WINDOWID in environment: $WINDOWID"
+		echo "$WINDOWID"
+		return 0
+	fi
+
+	# If we have TERMINAL_WINDOW_ID set (from customise_shell.sh)
+	if [ -n "$TERMINAL_WINDOW_ID" ]; then
+		debug "Found TERMINAL_WINDOW_ID in environment: $TERMINAL_WINDOW_ID"
+		echo "$TERMINAL_WINDOW_ID"
+		return 0
+	fi
+
+	return 1
+}
+
+# Function to get workspace for a window ID
+get_workspace_for_window() {
+	local window_id=$1
+	# Query i3 tree and find the workspace containing this window
+	i3-msg -t get_tree 2>/dev/null | python3 -c "
+import sys, json
+try:
+    tree = json.load(sys.stdin)
+    target = $window_id
+    def search(node, ws=None):
+        if node.get('type') == 'workspace':
+            ws = node.get('name')
+        if node.get('window') == target:
+            return ws
+        for child in node.get('nodes', []) + node.get('floating_nodes', []):
+            result = search(child, ws)
+            if result: return result
+        return None
+    result = search(tree)
+    if result:
+        print(result)
+except:
+    pass
+" 2>/dev/null
+}
+
+# First, try to get terminal window directly if we're in a terminal
+terminal_window=$(get_terminal_window)
+if [ -n "$terminal_window" ]; then
+	workspace=$(get_workspace_for_window "$terminal_window")
+	if [ -n "$workspace" ]; then
+		debug "Found workspace from terminal window: $workspace"
+		echo "$workspace"
+		exit 0
+	fi
+fi
+
+# Walk up the process tree
+current_pid=$PID
+max_depth=20 # Prevent infinite loops
+depth=0
+
+while [ "$current_pid" -gt 1 ] && [ "$depth" -lt "$max_depth" ]; do
+	debug "Checking PID $current_pid (depth $depth)"
+
+	# Try to find windows for this process
+	windows=$(get_windows_for_pid "$current_pid")
+
+	if [ -n "$windows" ]; then
+		# Process has windows
+		window_count=$(echo "$windows" | wc -w)
+
+		if [ "$window_count" -eq 1 ]; then
+			# Single window, use it
+			debug "Found single window $windows for PID $current_pid"
+			workspace=$(get_workspace_for_window "$windows")
+			if [ -n "$workspace" ]; then
+				debug "Found workspace: $workspace"
+				echo "$workspace"
+				exit 0
+			fi
+		else
+			# Multiple windows - skip terminal servers and similar
+			debug "Skipping PID $current_pid with $window_count windows (likely terminal server)"
+		fi
+	fi
+
+	# Get parent PID and continue
+	parent_pid=$(get_ppid "$current_pid")
+	if [ "$parent_pid" = "0" ] || [ "$parent_pid" = "$current_pid" ]; then
+		break
+	fi
+	current_pid=$parent_pid
+	((depth++))
+done
+
+# If we get here, we couldn't find a workspace
+debug "No workspace found after checking $depth processes"
+
+# Last resort: check if we're in a terminal with TERMINAL_WORKSPACE
+if [ -n "$TERMINAL_WORKSPACE" ]; then
+	debug "Falling back to TERMINAL_WORKSPACE: $TERMINAL_WORKSPACE"
+	echo "$TERMINAL_WORKSPACE"
+	exit 0
+fi
+
+# No more fallbacks - if we can't reliably determine workspace, fail
+debug "Could not reliably determine workspace - aborting"
+exit 1
