@@ -22,29 +22,35 @@
 WORKSPACE=""
 STATE=""
 if [[ "$1" =~ ^[1-9]$|^10$ ]]; then
-    WORKSPACE="$1"
-    STATE="$2"
+	WORKSPACE="$1"
+	STATE="$2"
 else
-    WORKSPACE="$TERMINAL_WORKSPACE"
-    STATE="$1"
+	# Try to detect workspace using get-workspace-id
+	if command -v get-workspace-id >/dev/null 2>&1; then
+		WORKSPACE=$(get-workspace-id)
+	else
+		# Fallback to legacy TERMINAL_WORKSPACE if get-workspace-id not available
+		WORKSPACE="$TERMINAL_WORKSPACE"
+	fi
+	STATE="$1"
 fi
 
 # Validate workspace
 if [ -z "$WORKSPACE" ]; then
-    echo "Error: No workspace specified and TERMINAL_WORKSPACE not set" >&2
-    exit 1
+	echo "Error: Could not determine workspace (no window found in process tree)" >&2
+	exit 1
 fi
 
 if ! [[ "$WORKSPACE" =~ ^[1-9]$|^10$ ]]; then
-    echo "Error: Invalid workspace: $WORKSPACE (must be 1-10)" >&2
-    exit 1
+	echo "Error: Invalid workspace: $WORKSPACE (must be 1-10)" >&2
+	exit 1
 fi
 
 # Validate state provided
 if [ -z "$STATE" ]; then
-    echo "Error: No state specified" >&2
-    echo "Usage: set-workspace-status [workspace] <state>" >&2
-    exit 1
+	echo "Error: No state specified" >&2
+	echo "Usage: set-workspace-status [workspace] <state>" >&2
+	exit 1
 fi
 
 # Status file location
@@ -55,7 +61,7 @@ mkdir -p ~/.config/i3
 
 # Create file with empty workspaces if it doesn't exist
 if [ ! -f "$STATUS_FILE" ]; then
-    echo '{
+	echo '{
   "1": ["empty"],
   "2": ["empty"],
   "3": ["empty"],
@@ -66,7 +72,7 @@ if [ ! -f "$STATUS_FILE" ]; then
   "8": ["empty"],
   "9": ["empty"],
   "10": ["empty"]
-}' > "$STATUS_FILE"
+}' >"$STATUS_FILE"
 fi
 
 # Temp file for atomic updates
@@ -74,131 +80,131 @@ TEMP_FILE="/tmp/workspace-status-$$"
 
 # Process the state and update the JSON file
 case "$STATE" in
-    # AI states (mutually exclusive within subsystem)
-    ai-ready|ready)
-        jq --arg ws "$WORKSPACE" '
+# AI states (mutually exclusive within subsystem)
+ai-ready | ready)
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) | map(select(. | startswith("ai-") | not)) + ["ai-ready"] | unique)
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    ai-busy|busy)
-        jq --arg ws "$WORKSPACE" '
+ai-busy | busy)
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) | map(select(. | startswith("ai-") | not)) + ["ai-busy"] | unique)
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    ai-complete|complete)
-        # Special case: adds both ai-ready and ai-complete
-        # But only add ai-complete if workspace is not focused
-        jq --arg ws "$WORKSPACE" '
+ai-complete | complete)
+	# Special case: adds both ai-ready and ai-complete
+	# But only add ai-complete if workspace is not focused
+	jq --arg ws "$WORKSPACE" '
           .[$ws] as $states |
           if ($states // [] | index("focused")) then
             .[$ws] = (($states // []) | map(select(. | startswith("ai-") | not)) + ["ai-ready"] | unique)
           else
             .[$ws] = (($states // []) | map(select(. | startswith("ai-") | not)) + ["ai-ready", "ai-complete"] | unique)
           end
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    ai-exited|exited)
-        # Remove all AI states
-        jq --arg ws "$WORKSPACE" '
+ai-exited | exited)
+	# Remove all AI states
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) | map(select(. | startswith("ai-") | not)) | if length == 0 then ["occupied"] else . end)
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    # Task states (mutually exclusive within subsystem)
-    task-running)
-        jq --arg ws "$WORKSPACE" '
+# Task states (mutually exclusive within subsystem)
+task-running)
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) | map(select(. | startswith("task-") | not)) + ["task-running"] | unique)
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    task-succeeded)
-        # Only add task-succeeded if workspace is not focused
-        jq --arg ws "$WORKSPACE" '
+task-succeeded)
+	# Only add task-succeeded if workspace is not focused
+	jq --arg ws "$WORKSPACE" '
           .[$ws] as $states |
           if ($states // [] | index("focused")) then
             .[$ws] = (($states // []) | map(select(. | startswith("task-") | not)))
           else
             .[$ws] = (($states // []) | map(select(. | startswith("task-") | not)) + ["task-succeeded"] | unique)
           end
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    task-failed)
-        jq --arg ws "$WORKSPACE" '
+task-failed)
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) | map(select(. | startswith("task-") | not)) + ["task-failed"] | unique)
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    task-clear)
-        # Remove all task states
-        jq --arg ws "$WORKSPACE" '
+task-clear)
+	# Remove all task states
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) | map(select(. | startswith("task-") | not)) | if length == 0 then ["occupied"] else . end)
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    # Focus states (toggle)
-    focused)
-        # Add focused state, remove ai-complete, task-succeeded, and urgent (notification states)
-        jq --arg ws "$WORKSPACE" '
+# Focus states (toggle)
+focused)
+	# Add focused state, remove ai-complete, task-succeeded, and urgent (notification states)
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) | map(select(. != "ai-complete" and . != "task-succeeded" and . != "urgent")) + ["focused"] | unique)
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    unfocused)
-        # Remove focused state
-        jq --arg ws "$WORKSPACE" '
+unfocused)
+	# Remove focused state
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) | map(select(. != "focused")) | if length == 0 then ["occupied"] else . end)
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    # Base states
-    urgent)
-        jq --arg ws "$WORKSPACE" '
+# Base states
+urgent)
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) + ["urgent"] | unique)
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    occupied)
-        # Remove empty if present, add occupied
-        jq --arg ws "$WORKSPACE" '
+occupied)
+	# Remove empty if present, add occupied
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) | map(select(. != "empty")) + ["occupied"] | unique)
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    empty)
-        # Clear all states, set to empty
-        jq --arg ws "$WORKSPACE" '
+empty)
+	# Clear all states, set to empty
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ["empty"]
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    clear)
-        # Clear all states to occupied
-        jq --arg ws "$WORKSPACE" '
+clear)
+	# Clear all states to occupied
+	jq --arg ws "$WORKSPACE" '
           .[$ws] = ["occupied"]
-        ' "$STATUS_FILE" > "$TEMP_FILE"
-        ;;
+        ' "$STATUS_FILE" >"$TEMP_FILE"
+	;;
 
-    *)
-        echo "Error: Unknown state: $STATE" >&2
-        echo "Valid states:" >&2
-        echo "  AI: ai-ready, ai-busy, ai-complete, ai-exited" >&2
-        echo "  Task: task-running, task-succeeded, task-failed, task-clear" >&2
-        echo "  Focus: focused, unfocused" >&2
-        echo "  Base: urgent, occupied, empty, clear" >&2
-        echo "  Shortcuts: ready, busy, complete, exited" >&2
-        exit 1
-        ;;
+*)
+	echo "Error: Unknown state: $STATE" >&2
+	echo "Valid states:" >&2
+	echo "  AI: ai-ready, ai-busy, ai-complete, ai-exited" >&2
+	echo "  Task: task-running, task-succeeded, task-failed, task-clear" >&2
+	echo "  Focus: focused, unfocused" >&2
+	echo "  Base: urgent, occupied, empty, clear" >&2
+	echo "  Shortcuts: ready, busy, complete, exited" >&2
+	exit 1
+	;;
 esac
 
 # Move temp file to actual file (atomic update)
 if [ -f "$TEMP_FILE" ]; then
-    mv "$TEMP_FILE" "$STATUS_FILE"
-    exit 0
+	mv "$TEMP_FILE" "$STATUS_FILE"
+	exit 0
 else
-    echo "Error: Failed to update workspace status" >&2
-    exit 1
+	echo "Error: Failed to update workspace status" >&2
+	exit 1
 fi
