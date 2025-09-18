@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+#
+# show-workspace-status - Display or watch the workspace status file
+#
+# Usage: show-workspace-status [options]
+#   -w, --watch    Watch the file with updates every 0.5 seconds (default)
+#   -o, --once     Show the status once and exit
+#   -r, --raw      Show raw JSON without formatting
+#   -h, --help     Show this help message
+
+STATUS_FILE=~/.config/i3/workspace-status.json
+
+# Default to watch mode
+WATCH_MODE=true
+RAW_MODE=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+	case $1 in
+	-w | --watch)
+		WATCH_MODE=true
+		shift
+		;;
+	-o | --once)
+		WATCH_MODE=false
+		shift
+		;;
+	-r | --raw)
+		RAW_MODE=true
+		shift
+		;;
+	-h | --help)
+		echo "Usage: show-workspace-status [options]"
+		echo "Display or watch the workspace status file"
+		echo ""
+		echo "Options:"
+		echo "  -w, --watch    Watch the file with updates every 0.5 seconds (default)"
+		echo "  -o, --once     Show the status once and exit"
+		echo "  -r, --raw      Show raw JSON without formatting"
+		echo "  -h, --help     Show this help message"
+		echo ""
+		echo "Status file: $STATUS_FILE"
+		exit 0
+		;;
+	*)
+		echo "Unknown option: $1"
+		echo "Use -h or --help for usage information"
+		exit 1
+		;;
+	esac
+done
+
+# Function to display the status
+show_status() {
+	if [ ! -f "$STATUS_FILE" ]; then
+		echo "Status file not found: $STATUS_FILE"
+		return 1
+	fi
+
+	if [ "$RAW_MODE" = true ]; then
+		cat "$STATUS_FILE"
+	else
+		# Pretty print with colors and formatting
+		echo "=== Workspace Status ==="
+		echo "File: $STATUS_FILE"
+		echo ""
+
+		# Parse and format each workspace
+		for ws in {1..10}; do
+			states=$(jq -r ".\"$ws\" | join(\", \")" "$STATUS_FILE" 2>/dev/null)
+
+			# Color based on state
+			if [[ "$states" == *"focused"* ]]; then
+				# Focused workspace - bright white
+				printf "\033[1;37mWorkspace %2d: %s\033[0m\n" "$ws" "$states"
+			elif [[ "$states" == *"ai-busy"* ]] || [[ "$states" == *"task-running"* ]]; then
+				# Busy - yellow
+				printf "\033[1;33mWorkspace %2d: %s\033[0m\n" "$ws" "$states"
+			elif [[ "$states" == *"ai-complete"* ]] || [[ "$states" == *"task-succeeded"* ]]; then
+				# Complete - blue
+				printf "\033[1;34mWorkspace %2d: %s\033[0m\n" "$ws" "$states"
+			elif [[ "$states" == *"task-failed"* ]] || [[ "$states" == *"urgent"* ]]; then
+				# Failed/urgent - red
+				printf "\033[1;31mWorkspace %2d: %s\033[0m\n" "$ws" "$states"
+			elif [[ "$states" == *"ai-ready"* ]]; then
+				# AI ready - green
+				printf "\033[1;32mWorkspace %2d: %s\033[0m\n" "$ws" "$states"
+			elif [[ "$states" == *"occupied"* ]]; then
+				# Occupied - normal
+				printf "Workspace %2d: %s\n" "$ws" "$states"
+			else
+				# Empty - dim
+				printf "\033[2mWorkspace %2d: %s\033[0m\n" "$ws" "$states"
+			fi
+		done
+	fi
+}
+
+if [ "$WATCH_MODE" = true ]; then
+	# Watch mode with 0.5 second refresh
+	if command -v watch >/dev/null 2>&1; then
+		if [ "$RAW_MODE" = true ]; then
+			watch -n 0.5 -t cat "$STATUS_FILE"
+		else
+			# Use watch with color support
+			watch -n 0.5 -c -t "bash -c '$(declare -f show_status); RAW_MODE=$RAW_MODE STATUS_FILE=$STATUS_FILE show_status'"
+		fi
+	else
+		# Fallback if watch is not available
+		while true; do
+			clear
+			show_status
+			sleep 0.5
+		done
+	fi
+else
+	# Show once
+	show_status
+fi
