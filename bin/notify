@@ -36,13 +36,8 @@ fi
 
 # Send notification
 if [ $# -gt 0 ]; then
-	# Send the notification
+	# Send the notification (dunst will handle TTS via tts-notification script)
 	notify-send "Desktop $WORKSPACE" "$*"
-
-	# Send TTS notification if available
-	if command -v tts >/dev/null 2>&1; then
-		tts "$*" &
-	fi
 
 	# Set urgent hint using the stored terminal window ID
 	if [ -n "$TERMINAL_WINDOW_ID" ]; then

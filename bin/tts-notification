@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+#
+# tts-notification - Handle notifications with text-to-speech
+#
+# Dunst passes notification data via environment variables:
+#   DUNST_APP_NAME
+#   DUNST_SUMMARY
+#   DUNST_BODY
+#   DUNST_URGENCY
+#   DUNST_TIMESTAMP
+
+# Check if tts is available
+if ! command -v tts >/dev/null 2>&1; then
+	exit 0
+fi
+
+# Use environment variables from dunst
+APP_NAME="$DUNST_APP_NAME"
+SUMMARY="$DUNST_SUMMARY"
+BODY="$DUNST_BODY"
+URGENCY="$DUNST_URGENCY"
+
+# Function to clean text for TTS (remove URLs, special chars, etc)
+clean_for_tts() {
+	echo "$1" | sed -e 's/https\?:\/\/[^ ]*//g' -e 's/[<>"]//g' | head -c 100
+}
+
+# Determine what to speak based on app and content
+case "$APP_NAME" in
+notify-send)
+	# This is from our notify command - speak the workspace and message
+	if [[ "$SUMMARY" == Desktop* ]]; then
+		# Extract workspace number from "Desktop X"
+		WORKSPACE_NUM=$(echo "$SUMMARY" | sed 's/Desktop //')
+		tts "Workspace $WORKSPACE_NUM: $(clean_for_tts "$BODY")" &
+	else
+		tts "$(clean_for_tts "$SUMMARY $BODY")" &
+	fi
+	;;
+
+*[Cc]hrome* | *[Ff]irefox* | *[Bb]rave* | *[Cc]hromium*)
+	# Browser notifications
+	case "$SUMMARY" in
+	*Gmail* | *[Ee]mail* | *[Mm]ail*)
+		tts "New email" &
+		;;
+	*[Cc]alendar* | *[Mm]eeting* | *[Ee]vent*)
+		tts "Calendar: $(clean_for_tts "$SUMMARY")" &
+		;;
+	*[Ss]lack* | *[Tt]eams* | *[Dd]iscord*)
+		tts "Message: $(clean_for_tts "$SUMMARY")" &
+		;;
+	*)
+		# Generic browser notification - only speak if urgent
+		if [ "$URGENCY" = "CRITICAL" ]; then
+			tts "Alert: $(clean_for_tts "$SUMMARY")" &
+		fi
+		;;
+	esac
+	;;
+
+[Ss]lack | [Tt]eams | [Dd]iscord)
+	# Chat applications
+	tts "$(clean_for_tts "$APP_NAME"): $(clean_for_tts "$SUMMARY")" &
+	;;
+
+[Tt]hunderbird | [Ee]volution | [Gg]eary)
+	# Email clients
+	tts "Email: $(clean_for_tts "$SUMMARY")" &
+	;;
+
+*)
+	# For other apps, only speak critical notifications
+	if [ "$URGENCY" = "CRITICAL" ]; then
+		tts "$(clean_for_tts "$APP_NAME"): $(clean_for_tts "$SUMMARY")" &
+	fi
+	;;
+esac
+
+exit 0

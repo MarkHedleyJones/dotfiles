@@ -1,0 +1,52 @@
+# Dunst configuration with TTS support
+# This config adds text-to-speech for notifications
+
+[global]
+    # Script to run for all notifications
+    # The script receives: app_name, id, icon, summary, body, urgency
+    script = ~/.local/bin/tts-notification
+
+    # Keep other settings at defaults - dunst will merge with system config
+    # You can override specific settings here as needed
+
+# Rule examples for specific apps (optional):
+
+# Speak all email notifications
+[email]
+    appname = "*[Gg]mail*"
+    script = ~/.local/bin/tts-notification
+    urgency = normal
+
+# Speak all Slack messages
+[slack]
+    appname = "[Ss]lack"
+    script = ~/.local/bin/tts-notification
+
+# Speak calendar reminders with higher priority
+[calendar]
+    summary = "*[Cc]alendar*"
+    script = ~/.local/bin/tts-notification
+    urgency = critical
+
+# Speak meeting reminders
+[meeting]
+    summary = "*[Mm]eeting*"
+    script = ~/.local/bin/tts-notification
+    urgency = critical
+
+# Browser notifications (Chrome, Firefox, etc)
+[browser_chrome]
+    appname = "Google Chrome"
+    script = ~/.local/bin/tts-notification
+
+[browser_firefox]
+    appname = "Firefox"
+    script = ~/.local/bin/tts-notification
+
+[browser_chromium]
+    appname = "Chromium"
+    script = ~/.local/bin/tts-notification
+
+[browser_brave]
+    appname = "Brave"
+    script = ~/.local/bin/tts-notification

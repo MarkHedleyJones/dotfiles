@@ -35,6 +35,17 @@ if [ ! -L ${HOME}/.config/i3 ]; then
 	ln -s ${SCRIPT_DIR}/i3 ${HOME}/.config/i3
 fi
 
+# Link dunst configuration if it exists
+if [ -d ${SCRIPT_DIR}/dunst ]; then
+	if [ ! -L ${HOME}/.config/dunst ]; then
+		echo "Linking ~/.config/dunst to ${SCRIPT_DIR}/dunst"
+		if [ -d ${HOME}/.config/dunst ]; then
+			mv ${HOME}/.config/dunst ${HOME}/.config/dunst_original
+		fi
+		ln -s ${SCRIPT_DIR}/dunst ${HOME}/.config/dunst
+	fi
+fi
+
 if [ ! -d ${LOCAL_BIN} ]; then
 	echo "Creating a local binary folder at: ${LOCAL_BIN}"
 	mkdir -p ${LOCAL_BIN}
