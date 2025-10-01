@@ -1,37 +1,13 @@
 #!/bin/bash
-# Use environment variable to track the terminal's workspace
+# Use get-workspace-id to detect workspace from process tree
 
-# If TERMINAL_WORKSPACE is already set (by bashrc), use it
-if [ -n "$TERMINAL_WORKSPACE" ]; then
-	WORKSPACE="$TERMINAL_WORKSPACE"
-else
-	# Try to determine workspace from current focus as fallback
-	FOCUSED_WINDOW=$(xdotool getwindowfocus 2>/dev/null)
+# Try to get workspace using get-workspace-id
+WORKSPACE=$(get-workspace-id)
 
-	if [ -n "$FOCUSED_WINDOW" ] && [ "$FOCUSED_WINDOW" != "1" ]; then
-		WORKSPACE=$(i3-msg -t get_tree 2>/dev/null | python3 -c "
-import sys, json
-try:
-    tree = json.load(sys.stdin)
-    target = $FOCUSED_WINDOW
-    def search(node, ws=None):
-        if node.get('type') == 'workspace':
-            ws = node.get('name')
-        if node.get('window') == target:
-            return ws
-        for child in node.get('nodes', []) + node.get('floating_nodes', []):
-            result = search(child, ws)
-            if result: return result
-        return None
-    print(search(tree) or '')
-except: print('')
-" 2>/dev/null)
-	fi
-
-	if [ -z "$WORKSPACE" ]; then
-		WORKSPACE=$(i3-msg -t get_workspaces 2>/dev/null | jq -r '.[] | select(.focused == true) | .name' 2>/dev/null)
-		WORKSPACE="$WORKSPACE (current)"
-	fi
+# If detection failed, we don't have a reliable workspace
+if [ -z "$WORKSPACE" ]; then
+	# Could not detect workspace - use "unknown" or skip workspace info
+	WORKSPACE="unknown"
 fi
 
 # Send notification
