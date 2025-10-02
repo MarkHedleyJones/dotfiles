@@ -64,6 +64,7 @@ bindsym $mod+F2 exec ~/.screenlayout/external.sh
 bindsym $mod+F3 exec ~/.screenlayout/dual.sh
 
 bindsym $mod+x exec gnome-screenshot --interactive
+bindsym $mod+b exec XDG_CURRENT_DESKTOP=GNOME gnome-control-center bluetooth
 
 # Monitor control
 
@@ -101,10 +102,8 @@ bindsym ctrl+shift+b exec printf "$(date +%Y-W%V-%u) ($(date +%F))" | xclip -sel
 #bindsym Mod4+x exec --no-startup-id gnome-terminal -e 'sh -c "htop"' --class HTOP
 for_window [class="CALENDAR"] floating enable, resize grow left 0, resize grow right 0, resize grow up 170, resize grow down 170;
 for_window [class="HTOP"] floating enable, fullscreen enable;
+for_window [class="keymapp"] move scratchpad
 
-# Assign keymapp to workspace 10
-assign [class="keymapp"] 10
-assign [class="Keymapp"] 10
 
 #bindsym $mod+j exec xrandr -o left
 #bindsym $mod+k exec xrandr -o normal
@@ -253,16 +252,15 @@ bindsym $mod+r mode "resize"
 # }
 exec_always --no-startup-id $HOME/.config/i3/polybar.sh
 exec --no-startup-id xsetroot -solid "#384A52"
+exec --no-startup-id gnome-flashback
 exec --no-startup-id nm-applet
 exec --no-startup-id gnome-keyring-daemon --start --components=ssh,secrets,pkcs11
-exec --no-startup-id /usr/libexec/gsd-xsettings
 #exec --no-startup-id fcitx --replace
 exec --no-startup-id ibus-daemon
 exec --no-startup-id xrdb ~/.Xresources
 exec --no-startup-id xset r rate 200 20
 exec --no-startup-id setxkbmap -option "shift:both_capslock"
 exec --no-startup-id ~/.config/i3/launch-ssh-agent.sh
-exec --no-startup-id blueman-applet
 exec --no-startup-id ~/AppImages/keymapp --minimized
 exec_always --no-startup-id bash -c "sleep 3 && ~/repos/speech-to-text/launcher.sh"
 exec --no-startup-id reset-workspace-status
