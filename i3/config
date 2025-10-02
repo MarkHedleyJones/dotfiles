@@ -116,7 +116,7 @@ for_window [class="Keymapp"] move scratchpad, scratchpad show, scratchpad show
 # bindsym $mod+d exec --no-startup-id i3-dmenu-desktop
 
 # disable gaps (i3-gaps)
-for_window [class="^.*"] border pixel 2
+for_window [class="^.*"] border pixel 0
 gaps outer 0
 gaps inner 30
 bindcode Mod4+21 gaps inner current plus 5
