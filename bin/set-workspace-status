@@ -37,8 +37,8 @@ fi
 
 # Validate workspace
 if [ -z "$WORKSPACE" ]; then
-	echo "Error: Could not determine workspace (no window found in process tree)" >&2
-	exit 1
+	# Exit successfully (don't spam hooks/logs when workspace can't be determined)
+	exit 0
 fi
 
 if ! [[ "$WORKSPACE" =~ ^[1-9]$|^10$ ]]; then
