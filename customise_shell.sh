@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Set default terminal
+export TERMINAL=wezterm
+
 # Calendar aliases
 alias mycal="ncal -w3Mb"
 alias mycal12="mycal -B6 -A6"

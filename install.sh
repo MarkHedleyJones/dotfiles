@@ -46,6 +46,28 @@ if [ -d ${SCRIPT_DIR}/dunst ]; then
 	fi
 fi
 
+# Link wezterm configuration if it exists
+if [ -d ${SCRIPT_DIR}/wezterm ]; then
+	if [ ! -L ${HOME}/.config/wezterm ]; then
+		echo "Linking ~/.config/wezterm to ${SCRIPT_DIR}/wezterm"
+		if [ -d ${HOME}/.config/wezterm ]; then
+			mv ${HOME}/.config/wezterm ${HOME}/.config/wezterm_original
+		fi
+		ln -s ${SCRIPT_DIR}/wezterm ${HOME}/.config/wezterm
+	fi
+fi
+
+# Link picom configuration if it exists
+if [ -d ${SCRIPT_DIR}/picom ]; then
+	if [ ! -L ${HOME}/.config/picom ]; then
+		echo "Linking ~/.config/picom to ${SCRIPT_DIR}/picom"
+		if [ -d ${HOME}/.config/picom ]; then
+			mv ${HOME}/.config/picom ${HOME}/.config/picom_original
+		fi
+		ln -s ${SCRIPT_DIR}/picom ${HOME}/.config/picom
+	fi
+fi
+
 if [ ! -d ${LOCAL_BIN} ]; then
 	echo "Creating a local binary folder at: ${LOCAL_BIN}"
 	mkdir -p ${LOCAL_BIN}
