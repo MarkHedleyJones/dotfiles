@@ -129,6 +129,23 @@ echo "Setting up shell customization..."
 add_source_to_shell_config "${HOME}/.bashrc"
 add_source_to_shell_config "${HOME}/.zshrc"
 
+# Set up GNOME Flashback
+echo ""
+echo "Setting up GNOME Flashback integration..."
+if ! dpkg -l | grep -q "^ii  gnome-flashback"; then
+	echo "Installing gnome-flashback..."
+	sudo apt install -y gnome-flashback
+else
+	echo "gnome-flashback already installed"
+fi
+
+# Configure GNOME Flashback settings
+echo "Configuring GNOME Flashback settings..."
+gsettings set org.gnome.gnome-flashback desktop false
+gsettings set org.gnome.gnome-flashback root-background true
+gsettings set org.gnome.gnome-flashback status-notifier-watcher false
+echo "GNOME Flashback configured: desktop icons disabled, wallpaper enabled, tray disabled"
+
 # Check for git-hooks repository
 echo ""
 echo "Checking for git-hooks repository..."
