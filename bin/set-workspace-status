@@ -104,10 +104,6 @@ ai-complete | complete)
             .[$ws] = (($states // []) | map(select(. | startswith("ai-") | not)) + ["ai-ready", "ai-complete"] | unique)
           end
         ' "$STATUS_FILE" >"$TEMP_FILE"
-	# Send TTS notification if available
-	if command -v tts >/dev/null 2>&1; then
-		tts "AI complete on workspace $WORKSPACE" &
-	fi
 	;;
 
 ai-exited | exited)
@@ -134,20 +130,12 @@ task-succeeded)
             .[$ws] = (($states // []) | map(select(. | startswith("task-") | not)) + ["task-succeeded"] | unique)
           end
         ' "$STATUS_FILE" >"$TEMP_FILE"
-	# Send TTS notification if available
-	if command -v tts >/dev/null 2>&1; then
-		tts "Task succeeded on workspace $WORKSPACE" &
-	fi
 	;;
 
 task-failed)
 	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) | map(select(. | startswith("task-") | not)) + ["task-failed"] | unique)
         ' "$STATUS_FILE" >"$TEMP_FILE"
-	# Send TTS notification if available
-	if command -v tts >/dev/null 2>&1; then
-		tts "Task failed on workspace $WORKSPACE" &
-	fi
 	;;
 
 task-clear)
@@ -177,10 +165,6 @@ urgent)
 	jq --arg ws "$WORKSPACE" '
           .[$ws] = ((.[$ws] // []) + ["urgent"] | unique)
         ' "$STATUS_FILE" >"$TEMP_FILE"
-	# Send TTS notification if available
-	if command -v tts >/dev/null 2>&1; then
-		tts "Urgent on workspace $WORKSPACE" &
-	fi
 	;;
 
 occupied)

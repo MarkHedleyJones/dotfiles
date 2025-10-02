@@ -42,17 +42,35 @@ fi
 # Track terminal workspace and window ID for notify command
 update_terminal_workspace() {
 	if [ -n "$DISPLAY" ] && command -v i3-msg >/dev/null 2>&1; then
-		local focused_window=$(xdotool getwindowfocus 2>/dev/null)
-		if [ -n "$focused_window" ] && [ "$focused_window" != "1" ]; then
-			# Store the window ID for this terminal
-			export TERMINAL_WINDOW_ID="$focused_window"
+		# Find the actual terminal window by searching for windows belonging to this process or its parents
+		local terminal_window=""
 
-			# Also get the workspace
-			export TERMINAL_WORKSPACE=$(i3-msg -t get_tree 2>/dev/null | python3 -c "
+		# Method 1: Use WINDOWID if set by the terminal emulator (xterm, urxvt, etc.)
+		if [ -n "$WINDOWID" ]; then
+			terminal_window="$WINDOWID"
+		fi
+
+		# Method 2: Search for windows belonging to parent processes (terminal emulator)
+		if [ -z "$terminal_window" ] && command -v xdotool >/dev/null 2>&1; then
+			# Try parent process first (usually the terminal emulator)
+			terminal_window=$(xdotool search --pid $PPID 2>/dev/null | head -1)
+
+			# If that didn't work, try grandparent
+			if [ -z "$terminal_window" ]; then
+				local ppid=$(ps -o ppid= -p $PPID 2>/dev/null | tr -d ' ')
+				if [ -n "$ppid" ]; then
+					terminal_window=$(xdotool search --pid $ppid 2>/dev/null | head -1)
+				fi
+			fi
+		fi
+
+		if [ -n "$terminal_window" ] && [ "$terminal_window" != "1" ]; then
+			# Validate window exists in i3 tree and get workspace in one go
+			local workspace=$(i3-msg -t get_tree 2>/dev/null | python3 -c "
 import sys, json
 try:
     tree = json.load(sys.stdin)
-    target = $focused_window
+    target = $terminal_window
     def search(node, ws=None):
         if node.get('type') == 'workspace':
             ws = node.get('name')
@@ -65,6 +83,12 @@ try:
     print(search(tree) or '')
 except: pass
 " 2>/dev/null)
+
+			# Only export if we found a valid workspace (validates window exists in i3)
+			if [ -n "$workspace" ]; then
+				export TERMINAL_WINDOW_ID="$terminal_window"
+				export TERMINAL_WORKSPACE="$workspace"
+			fi
 		fi
 	fi
 }

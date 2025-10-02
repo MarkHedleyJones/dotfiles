@@ -91,6 +91,8 @@ if [ -n "$terminal_window" ]; then
 		debug "Found workspace from terminal window: $workspace"
 		echo "$workspace"
 		exit 0
+	else
+		debug "Terminal window $terminal_window not found in i3 tree (may be stale), falling back to process tree walk"
 	fi
 fi
 
@@ -106,22 +108,21 @@ while [ "$current_pid" -gt 1 ] && [ "$depth" -lt "$max_depth" ]; do
 	windows=$(get_windows_for_pid "$current_pid")
 
 	if [ -n "$windows" ]; then
-		# Process has windows
+		# Process has windows - try each one
 		window_count=$(echo "$windows" | wc -w)
+		debug "Found $window_count window(s) for PID $current_pid"
 
-		if [ "$window_count" -eq 1 ]; then
-			# Single window, use it
-			debug "Found single window $windows for PID $current_pid"
-			workspace=$(get_workspace_for_window "$windows")
+		# Try each window until we find one in the i3 tree
+		for window_id in $windows; do
+			workspace=$(get_workspace_for_window "$window_id")
 			if [ -n "$workspace" ]; then
-				debug "Found workspace: $workspace"
+				debug "Found workspace: $workspace (from window $window_id)"
 				echo "$workspace"
 				exit 0
 			fi
-		else
-			# Multiple windows - skip terminal servers and similar
-			debug "Skipping PID $current_pid with $window_count windows (likely terminal server)"
-		fi
+		done
+
+		debug "None of the $window_count windows for PID $current_pid were in i3 tree"
 	fi
 
 	# Get parent PID and continue
