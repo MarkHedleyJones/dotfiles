@@ -137,6 +137,44 @@ else
 	echo "Warning: ${SCRIPT_DIR}/config does not exist, skipping config linking"
 fi
 
+# Set up GTK4 theme linking
+echo ""
+echo "Setting up GTK4 theme..."
+GTK3_SETTINGS="${HOME}/.config/gtk-3.0/settings.ini"
+GTK4_CONFIG_DIR="${HOME}/.config/gtk-4.0"
+
+if [ -f "${GTK3_SETTINGS}" ]; then
+	THEME_NAME=$(grep "^gtk-theme-name=" "${GTK3_SETTINGS}" | cut -d= -f2)
+
+	if [ -n "${THEME_NAME}" ]; then
+		THEME_GTK4_DIR="${HOME}/.themes/${THEME_NAME}/gtk-4.0"
+
+		if [ -d "${THEME_GTK4_DIR}" ]; then
+			mkdir -p "${GTK4_CONFIG_DIR}"
+
+			# Link GTK4 theme files
+			for file in gtk.css gtk-dark.css; do
+				if [ -f "${THEME_GTK4_DIR}/${file}" ] && [ ! -L "${GTK4_CONFIG_DIR}/${file}" ]; then
+					echo "Linking GTK4 theme file: ${file}"
+					ln -sf "${THEME_GTK4_DIR}/${file}" "${GTK4_CONFIG_DIR}/${file}"
+				fi
+			done
+
+			# Link assets directory
+			if [ -d "${THEME_GTK4_DIR}/assets" ] && [ ! -L "${GTK4_CONFIG_DIR}/assets" ]; then
+				echo "Linking GTK4 theme assets"
+				ln -sf "${THEME_GTK4_DIR}/assets" "${GTK4_CONFIG_DIR}/assets"
+			fi
+
+			echo "GTK4 theme linked: ${THEME_NAME}"
+		else
+			echo "GTK4 theme directory not found for: ${THEME_NAME}"
+		fi
+	fi
+else
+	echo "GTK3 settings not found, skipping GTK4 theme linking"
+fi
+
 # Set up personal aliases file if it doesn't exist
 if [ ! -f "${PERSONAL_ALIASES}" ]; then
 	echo "Creating personal aliases file from template..."

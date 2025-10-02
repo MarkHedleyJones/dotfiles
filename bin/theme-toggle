@@ -9,20 +9,44 @@ GTK4_SETTINGS_FILE="$HOME/.config/gtk-4.0/settings.ini"
 DARK_THEME="Adwaita-dark"
 LIGHT_THEME="Adwaita"
 
+# Function to update GTK4 symlinks
+update_gtk4_symlinks() {
+	THEME=$1
+	GTK4_CONFIG_DIR="$HOME/.config/gtk-4.0"
+	THEME_GTK4_DIR="$HOME/.themes/$THEME/gtk-4.0"
+
+	if [ -d "$THEME_GTK4_DIR" ]; then
+		# Remove old symlinks
+		rm -f "$GTK4_CONFIG_DIR/gtk.css" "$GTK4_CONFIG_DIR/gtk-dark.css" "$GTK4_CONFIG_DIR/assets"
+
+		# Create new symlinks
+		ln -sf "$THEME_GTK4_DIR/gtk.css" "$GTK4_CONFIG_DIR/"
+		ln -sf "$THEME_GTK4_DIR/gtk-dark.css" "$GTK4_CONFIG_DIR/"
+		if [ -d "$THEME_GTK4_DIR/assets" ]; then
+			ln -sf "$THEME_GTK4_DIR/assets" "$GTK4_CONFIG_DIR/"
+		fi
+	else
+		echo "Warning: GTK4 theme directory not found for $THEME"
+	fi
+}
+
 # Function to set the GTK theme
 set_theme() {
-    THEME=$1
+	THEME=$1
 
-    # Update GTK 2.0 settings
-    echo "gtk-theme-name=\"$THEME\"" > "$GTK2_SETTINGS_FILE"
+	# Update GTK 2.0 settings
+	echo "gtk-theme-name=\"$THEME\"" >"$GTK2_SETTINGS_FILE"
 
-    # Update GTK 3.0 settings
-    mkdir -p $(dirname "$GTK3_SETTINGS_FILE")
-    echo -e "[Settings]\ngtk-theme-name=$THEME" > "$GTK3_SETTINGS_FILE"
+	# Update GTK 3.0 settings
+	mkdir -p $(dirname "$GTK3_SETTINGS_FILE")
+	echo -e "[Settings]\ngtk-theme-name=$THEME" >"$GTK3_SETTINGS_FILE"
 
-    # Update GTK 4.0 settings
-    mkdir -p $(dirname "$GTK4_SETTINGS_FILE")
-    echo -e "[Settings]\ngtk-theme-name=$THEME" > "$GTK4_SETTINGS_FILE"
+	# Update GTK 4.0 settings
+	mkdir -p $(dirname "$GTK4_SETTINGS_FILE")
+	echo -e "[Settings]\ngtk-theme-name=$THEME" >"$GTK4_SETTINGS_FILE"
+
+	# Update GTK 4.0 symlinks
+	update_gtk4_symlinks "$THEME"
 }
 
 # Read current theme from the GTK 3.0 settings file
@@ -30,11 +54,11 @@ CURRENT_THEME=$(grep "^gtk-theme-name=" "$GTK3_SETTINGS_FILE" | cut -d'=' -f2)
 
 # Toggle theme
 if [ "$CURRENT_THEME" == "$DARK_THEME" ]; then
-    set_theme "$LIGHT_THEME"
-    echo "Switched to light theme: $LIGHT_THEME"
+	set_theme "$LIGHT_THEME"
+	echo "Switched to light theme: $LIGHT_THEME"
 else
-    set_theme "$DARK_THEME"
-    echo "Switched to dark theme: $DARK_THEME"
+	set_theme "$DARK_THEME"
+	echo "Switched to dark theme: $DARK_THEME"
 fi
 
 # Reload GTK settings (specific to desktop environment)

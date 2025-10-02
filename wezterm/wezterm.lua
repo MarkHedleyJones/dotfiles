@@ -8,8 +8,8 @@ config.enable_scroll_bar = false
 config.font = wezterm.font("Terminus (TTF)")
 config.font_size = 12.0
 
--- Catppuccin Mocha colour scheme
-config.color_scheme = "Catppuccin Mocha"
+-- Tokyo Night Storm colour scheme
+config.color_scheme = "tokyonight-storm"
 
 -- Window padding
 config.window_padding = {
