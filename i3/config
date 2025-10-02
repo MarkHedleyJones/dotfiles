@@ -102,7 +102,7 @@ bindsym ctrl+shift+b exec printf "$(date +%Y-W%V-%u) ($(date +%F))" | xclip -sel
 #bindsym Mod4+x exec --no-startup-id gnome-terminal -e 'sh -c "htop"' --class HTOP
 for_window [class="CALENDAR"] floating enable, resize grow left 0, resize grow right 0, resize grow up 170, resize grow down 170;
 for_window [class="HTOP"] floating enable, fullscreen enable;
-for_window [class="keymapp"] move scratchpad
+for_window [class="Keymapp"] move scratchpad, scratchpad show, scratchpad show
 
 
 #bindsym $mod+j exec xrandr -o left
@@ -116,7 +116,7 @@ for_window [class="keymapp"] move scratchpad
 # bindsym $mod+d exec --no-startup-id i3-dmenu-desktop
 
 # disable gaps (i3-gaps)
-for_window [class="^.*"] border pixel 3
+for_window [class="^.*"] border pixel 2
 gaps outer 0
 gaps inner 30
 bindcode Mod4+21 gaps inner current plus 5
@@ -252,8 +252,9 @@ bindsym $mod+r mode "resize"
 # }
 exec_always --no-startup-id $HOME/.config/i3/polybar.sh
 exec_always --no-startup-id picom --config ~/.config/picom/picom.conf
+exec --no-startup-id dunst
 exec --no-startup-id xsetroot -solid "#384A52"
-exec --no-startup-id gnome-flashback
+exec --no-startup-id bash -c "sleep 1 && gnome-flashback"
 exec --no-startup-id nm-applet
 exec --no-startup-id gnome-keyring-daemon --start --components=ssh,secrets,pkcs11
 #exec --no-startup-id fcitx --replace
@@ -268,7 +269,7 @@ exec --no-startup-id reset-workspace-status
 exec_always --no-startup-id i3-workspace-monitor
 exec_always --no-startup-id voyager-workspace-status-daemon
 
-client.focused #0088CC #0088CC #ffffff #dddddd
+client.focused #ff6600 #ff6600 #ffffff #ff6600
 client.focused_inactive #333333 #333333 #888888 #292d2e
 client.unfocused #333333 #333333 #888888 #292d2e
 client.urgent #2f343a #900000 #ffffff #900000
