@@ -101,3 +101,110 @@ PERSONAL_ALIASES="${HOME}/.aliases"
 if [ -f "${PERSONAL_ALIASES}" ]; then
 	source "${PERSONAL_ALIASES}"
 fi
+
+# Enable autocd - typing a directory name will cd to it
+if [ -n "$BASH_VERSION" ]; then
+	shopt -s autocd 2>/dev/null
+fi
+# Zsh has autocd enabled by default in most configs
+
+# Set up fzf keybindings if fzf is installed
+if command -v fzf >/dev/null 2>&1; then
+	# Detect shell type and load appropriate fzf configuration
+	if [ -n "$BASH_VERSION" ]; then
+		# Bash configuration
+		if [ -f /usr/share/doc/fzf/examples/key-bindings.bash ]; then
+			source /usr/share/doc/fzf/examples/key-bindings.bash
+		elif [ -f ~/.fzf.bash ]; then
+			source ~/.fzf.bash
+		fi
+
+		# Custom functions for file/directory selection
+		__fzf_select_file__() {
+			local cmd="${FZF_CTRL_F_COMMAND:-"command find -L . -mindepth 1 \\( -path '*/\\.*' -o -fstype 'sysfs' -o -fstype 'devfs' -o -fstype 'devtmpfs' -o -fstype 'proc' \\) -prune -o -type f -print 2> /dev/null | cut -b3-"}"
+			eval "$cmd" | fzf +m
+		}
+
+		__fzf_select_dir__() {
+			local cmd="${FZF_CTRL_G_COMMAND:-"command find -L . -mindepth 1 \\( -path '*/\\.*' -o -fstype 'sysfs' -o -fstype 'devfs' -o -fstype 'devtmpfs' -o -fstype 'proc' \\) -prune -o -type d -print 2> /dev/null | cut -b3-"}"
+			eval "$cmd" | fzf +m
+		}
+
+		# Ctrl+F for files - insert at cursor with space
+		__fzf_file_insert__() {
+			local file
+			file=$(__fzf_select_file__)
+			if [[ -n $file ]]; then
+				# Add a space before the file if we're not at the beginning and there's no space already
+				local prefix=""
+				if [[ $READLINE_POINT -gt 0 && "${READLINE_LINE:$((READLINE_POINT-1)):1}" != " " ]]; then
+					prefix=" "
+				fi
+				READLINE_LINE="${READLINE_LINE:0:$READLINE_POINT}${prefix}${file}${READLINE_LINE:$READLINE_POINT}"
+				((READLINE_POINT += ${#prefix} + ${#file}))
+			fi
+		}
+		bind -m emacs-standard -x '"\C-f": __fzf_file_insert__'
+		bind -m vi-command -x '"\C-f": __fzf_file_insert__'
+		bind -m vi-insert -x '"\C-f": __fzf_file_insert__'
+
+		# Ctrl+G for directories (Go to - actually cd there)
+		__fzf_cd__() {
+			local dir
+			dir=$(__fzf_select_dir__) && cd "$dir"
+		}
+		bind -m emacs-standard -x '"\C-g": __fzf_cd__'
+		bind -m vi-command -x '"\C-g": __fzf_cd__'
+		bind -m vi-insert -x '"\C-g": __fzf_cd__'
+
+	elif [ -n "$ZSH_VERSION" ]; then
+		# Zsh configuration
+		if [ -f /usr/share/doc/fzf/examples/key-bindings.zsh ]; then
+			source /usr/share/doc/fzf/examples/key-bindings.zsh
+		elif [ -f ~/.fzf.zsh ]; then
+			source ~/.fzf.zsh
+		fi
+
+		# Custom widgets for file/directory selection
+		fzf-file-widget() {
+			local cmd="${FZF_CTRL_F_COMMAND:-"command find -L . -mindepth 1 \\( -path '*/\\.*' -o -fstype 'sysfs' -o -fstype 'devfs' -o -fstype 'devtmpfs' -o -fstype 'proc' \\) -prune -o -type f -print 2> /dev/null | cut -b3-"}"
+			setopt localoptions pipefail no_aliases 2> /dev/null
+			local file
+			file=$(eval "$cmd" | FZF_DEFAULT_OPTS="--height 40% --reverse --bind=ctrl-z:ignore $FZF_DEFAULT_OPTS" fzf +m)
+			local ret=$?
+			if [[ -n $file ]]; then
+				# Add space if needed
+				if [[ -n $LBUFFER && "${LBUFFER[-1]}" != " " ]]; then
+					LBUFFER+=" "
+				fi
+				LBUFFER+="${(q)file}"
+			fi
+			zle reset-prompt
+			return $ret
+		}
+
+		fzf-dir-widget() {
+			local cmd="${FZF_CTRL_G_COMMAND:-"command find -L . -mindepth 1 \\( -path '*/\\.*' -o -fstype 'sysfs' -o -fstype 'devfs' -o -fstype 'devtmpfs' -o -fstype 'proc' \\) -prune -o -type d -print 2> /dev/null | cut -b3-"}"
+			setopt localoptions pipefail no_aliases 2> /dev/null
+			local dir
+			dir=$(eval "$cmd" | FZF_DEFAULT_OPTS="--height 40% --reverse --bind=ctrl-z:ignore $FZF_DEFAULT_OPTS" fzf +m) && cd "$dir"
+			local ret=$?
+			zle reset-prompt
+			return $ret
+		}
+
+		zle -N fzf-file-widget
+		zle -N fzf-dir-widget
+		bindkey '\C-f' fzf-file-widget
+		bindkey '\C-g' fzf-dir-widget
+	fi
+
+	# Custom fzf options for better experience
+	export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --preview 'ls -la {}' --preview-window=right:50%:wrap"
+
+	# Use fd if available for faster file/directory searching
+	if command -v fd >/dev/null 2>&1; then
+		export FZF_CTRL_F_COMMAND='fd --type f --hidden --follow --exclude .git'
+		export FZF_CTRL_G_COMMAND='fd --type d --hidden --follow --exclude .git'
+	fi
+fi
